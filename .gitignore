@@ -1,0 +1,43 @@
+# Data — never commit raw or processed datasets (leading slash = root only)
+/data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_metadata/
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+
+# Docker
+*.log
+
+# Model artifacts (track via MLflow instead)
+models/*.pkl
+models/*.joblib
