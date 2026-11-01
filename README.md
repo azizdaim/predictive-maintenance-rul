@@ -11,7 +11,7 @@ end-to-end machine learning engineering.
 
 | Stage | Status |
 |-------|--------|
-| Data loading & exploration | 🔄 In progress |
+| Data loading & exploration | ✅ Completed |
 | Feature engineering | ⬜ Not started |
 | Baseline model (XGBoost / LightGBM) | ⬜ Not started |
 | Experiment tracking (MLflow) | ⬜ Not started |

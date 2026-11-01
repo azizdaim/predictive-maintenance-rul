@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 
-DATASET_PATH = Path("data/raw")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATASET_PATH = PROJECT_ROOT / "data" / "raw"
 
 
 def load_data(filename: str) -> pd.DataFrame:
