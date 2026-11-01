@@ -12,7 +12,8 @@ end-to-end machine learning engineering.
 | Stage | Status |
 |-------|--------|
 | Data loading & exploration | ✅ Completed |
-| Feature engineering | ⬜ Not started |
+| Data preprocessing (RUL & cleaning) | ✅ Completed |
+| Feature engineering | 🔄 Next |
 | Baseline model (XGBoost / LightGBM) | ⬜ Not started |
 | Experiment tracking (MLflow) | ⬜ Not started |
 | Model serving (FastAPI) | ⬜ Not started |
