@@ -14,8 +14,8 @@ end-to-end machine learning engineering.
 | Data loading & exploration | ✅ Completed |
 | Data preprocessing (RUL & cleaning) | ✅ Completed |
 | Feature engineering | ✅ Completed |
-| Baseline model (XGBoost / LightGBM) | 🔄 Next |
-| Experiment tracking (MLflow) | ⬜ Not started |
+| Baseline model (XGBoost / LightGBM) | ✅ Completed |
+| Experiment tracking (MLflow) | 🔄 Next |
 | Model serving (FastAPI) | ⬜ Not started |
 | Drift monitoring (Evidently) | ⬜ Not started |
 | Dashboard (Streamlit) | ⬜ Not started |
