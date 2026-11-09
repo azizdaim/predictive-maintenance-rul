@@ -2,12 +2,15 @@
 
 from pathlib import Path
 
+import pandas as pd
+import pytest
 from mlflow.tracking import MlflowClient
 
 from src.data.loader import load_data
 from src.features.build_features import prepare_features
 from src.models.train import (
     EXPERIMENT_NAME,
+    cross_validate_by_engine,
     evaluate_on_test_set,
     get_feature_columns,
     run_experiment,
@@ -87,8 +90,42 @@ def test_sample_one_row_per_engine_is_reproducible() -> None:
     assert first["cycle"].tolist() != other["cycle"].tolist()
 
 
-def test_run_experiment_logs_comparable_metrics(tmp_path: Path) -> None:
-    """Verify a run is logged and NASA scores are normalized per engine."""
+def test_cross_validation_keeps_engines_separate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify no fold shares engines and every engine is validated once."""
+    df = prepare_features(load_data("train_FD001.txt"), is_train=True)
+    train_folds: list[set[int]] = []
+    val_folds: list[set[int]] = []
+
+    def fake_train(x_train: pd.DataFrame, y_train: pd.Series) -> None:
+        train_folds.append(set(df.loc[x_train.index, "engine_id"]))
+
+    def fake_evaluate(
+        model: None, val_df: pd.DataFrame, feature_cols: list[str]
+    ) -> dict[str, float]:
+        val_folds.append(set(val_df["engine_id"]))
+        return {"rmse": 1.0, "nasa_per_engine": 2.0}
+
+    monkeypatch.setattr("src.models.train.train_baseline_model", fake_train)
+    monkeypatch.setattr("src.models.train.evaluate_per_engine", fake_evaluate)
+
+    metrics = cross_validate_by_engine(df, n_splits=5)
+
+    assert len(val_folds) == 5
+    for train_engines, val_engines in zip(train_folds, val_folds, strict=True):
+        assert len(train_engines) == 80
+        assert len(val_engines) == 20
+        assert train_engines.isdisjoint(val_engines)
+
+    assert set().union(*val_folds) == set(df["engine_id"])
+    assert metrics["cv_rmse_mean"] == 1.0
+    assert metrics["cv_rmse_std"] == 0.0
+    assert metrics["cv_nasa_per_engine_mean"] == 2.0
+
+
+def test_run_experiment_logs_cv_and_final_model(tmp_path: Path) -> None:
+    """Verify a run logs cross-validation metrics and the final model."""
     tracking_uri = tmp_path.as_uri()
 
     metrics = run_experiment(tracking_uri=tracking_uri)
@@ -105,6 +142,7 @@ def test_run_experiment_logs_comparable_metrics(tmp_path: Path) -> None:
     # Raw labels keep the 11 engines above the cap, so RMSE must differ.
     assert metrics["test_rmse_raw"] != metrics["test_rmse"]
     assert metrics["test_nasa_per_engine"] == metrics["test_nasa_score"] / 100
+    assert metrics["cv_rmse_std"] > 0.0
     # A sum over every validation row would be in the tens of thousands.
-    assert metrics["val_nasa_per_engine"] < 100
+    assert metrics["cv_nasa_per_engine_mean"] < 100
 

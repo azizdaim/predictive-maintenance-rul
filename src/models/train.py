@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from lightgbm import LGBMRegressor
 from mlflow.models import infer_signature
+from sklearn.model_selection import KFold
 
 from src.data.loader import DATASET_PATH, PROJECT_ROOT, load_data
 from src.evaluation.metrics import evaluate_predictions
@@ -113,6 +114,42 @@ def evaluate_per_engine(
     }
 
 
+def cross_validate_by_engine(
+    df: pd.DataFrame, n_splits: int = 5, seed: int = 42
+) -> dict[str, float]:
+    """Evaluate the baseline with K-fold cross-validation grouped by engine.
+
+    Args:
+        df: Featured DataFrame containing 'engine_id' and 'RUL'.
+        n_splits: Number of folds.
+        seed: Seed for shuffling engines into folds.
+
+    Returns:
+        dict[str, float]: Mean and std of RMSE and NASA score per engine.
+    """
+    engines = df["engine_id"].unique()
+    feature_cols = get_feature_columns(df)
+    kfold = KFold(n_splits=n_splits, shuffle=True, random_state=seed)
+
+    rmses, nasas = [], []
+    for train_idx, val_idx in kfold.split(engines):
+        train_df = df[df["engine_id"].isin(engines[train_idx])]
+        val_df = df[df["engine_id"].isin(engines[val_idx])]
+
+        model = train_baseline_model(train_df[feature_cols], train_df["RUL"])
+
+        scores = evaluate_per_engine(model, val_df, feature_cols)
+        rmses.append(scores["rmse"])
+        nasas.append(scores["nasa_per_engine"])
+
+    return {
+        "cv_rmse_mean": float(np.mean(rmses)),
+        "cv_rmse_std": float(np.std(rmses)),
+        "cv_nasa_per_engine_mean": float(np.mean(nasas)),
+        "cv_nasa_per_engine_std": float(np.std(nasas)),
+    }
+
+
 def train_baseline_model(
     x_train: pd.DataFrame, y_train: pd.Series
 ) -> LGBMRegressor:
@@ -171,17 +208,20 @@ def evaluate_on_test_set(
 def run_experiment(
     window: int = 5,
     clip_threshold: int = 125,
-    train_ratio: float = 0.8,
-    val_seed: int = 42,
+    n_splits: int = 5,
+    cv_seed: int = 42,
     tracking_uri: str = DEFAULT_TRACKING_URI,
 ) -> dict[str, float]:
-    """Train the baseline, evaluate it, and log the run to MLflow.
+    """Cross-validate the baseline, train a final model, and log to MLflow.
+
+    Cross-validation scores these settings using throwaway fold models. The
+    logged model is a separate final fit on every training engine.
 
     Args:
         window: Rolling window size for feature engineering.
         clip_threshold: Piecewise RUL cap for training and clipped test labels.
-        train_ratio: Fraction of engines allocated to training.
-        val_seed: Seed of the first per-engine validation draw.
+        n_splits: Number of cross-validation folds.
+        cv_seed: Seed for shuffling engines into folds.
         tracking_uri: MLflow tracking location.
 
     Returns:
@@ -196,9 +236,7 @@ def run_experiment(
         window=window,
         clip_threshold=clip_threshold,
     )
-    train_df, val_df = split_by_engine(df, train_ratio=train_ratio)
-    feature_cols = get_feature_columns(train_df)
-    x_train = train_df[feature_cols]
+    x_train = df[get_feature_columns(df)]
 
     with mlflow.start_run(run_name=f"baseline_lightgbm_w{window}"):
         mlflow.log_params(
@@ -207,27 +245,23 @@ def run_experiment(
                 **BASELINE_PARAMS,
                 "window": window,
                 "clip_threshold": clip_threshold,
-                "train_ratio": train_ratio,
-                "val_seed": val_seed,
+                "n_splits": n_splits,
+                "cv_seed": cv_seed,
                 "val_num_draws": VAL_NUM_DRAWS,
             }
         )
 
-        model = train_baseline_model(x_train, train_df["RUL"])
+        cv_metrics = cross_validate_by_engine(df, n_splits=n_splits, seed=cv_seed)
 
-        all_rows = evaluate_predictions(
-            val_df["RUL"], model.predict(val_df[feature_cols])
-        )
-        per_engine = evaluate_per_engine(model, val_df, feature_cols, seed=val_seed)
+        model = train_baseline_model(x_train, df["RUL"])
+
         clipped = evaluate_on_test_set(
             model, window=window, clip_threshold=clip_threshold
         )
         raw = evaluate_on_test_set(model, window=window, clip_threshold=None)
 
         metrics = {
-            "val_rmse_all_rows": all_rows["rmse"],
-            "val_rmse": per_engine["rmse"],
-            "val_nasa_per_engine": per_engine["nasa_per_engine"],
+            **cv_metrics,
             "test_rmse": clipped["rmse"],
             "test_nasa_score": clipped["nasa_score"],
             "test_nasa_per_engine": clipped["nasa_per_engine"],

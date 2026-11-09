@@ -67,17 +67,18 @@ mlflow ui --backend-store-uri ./mlruns
 
 ## Baseline Results (FD001)
 
-LightGBM with 47 features, trained on 80 engines and validated on 20 held-out
-engines. Test scores use the last recorded cycle of each of the 100 test engines.
+LightGBM with 47 features. Settings are scored with 5-fold cross-validation
+grouped by engine, using random cut-off cycles averaged over 50 draws. The final
+model is then trained on all 100 training engines and evaluated on the last
+recorded cycle of each of the 100 test engines.
 
-| Evaluation | RMSE (cycles) | NASA score |
-|------------|---------------|------------|
-| Test, labels clipped at 125 | 17.17 | 922 |
-| Test, raw labels | 18.16 | 955 |
-| Validation, random cut-off per engine (mean of 50 draws) | 18.75 | 14.56 per engine |
+| Evaluation | RMSE (cycles) | NASA score per engine |
+|------------|---------------|-----------------------|
+| Cross-validation (mean ± std across folds) | 18.59 ± 1.46 | 15.77 ± 7.08 |
+| Test, labels clipped at 125 | 17.08 | 8.55 |
+| Test, raw labels | 18.08 | 8.87 |
 
-The test NASA score per engine is 9.22 with clipped labels, for comparison with
-the validation row.
+Total test NASA score is 855 with clipped labels and 887 with raw labels.
 
 ## License
 
