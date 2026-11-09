@@ -1,10 +1,17 @@
 """Unit tests for model training and evaluation module."""
 
+from pathlib import Path
+
+from mlflow.tracking import MlflowClient
+
 from src.data.loader import load_data
 from src.features.build_features import prepare_features
 from src.models.train import (
+    EXPERIMENT_NAME,
     evaluate_on_test_set,
     get_feature_columns,
+    run_experiment,
+    sample_one_row_per_engine,
     split_by_engine,
     train_baseline_model,
 )
@@ -65,4 +72,39 @@ def test_baseline_model_training_and_evaluation() -> None:
     # Test RMSE should comfortably be under 25 cycles for FD001
     assert test_metrics["rmse"] < 25.0
     assert test_metrics["nasa_score"] > 0.0
+
+
+def test_sample_one_row_per_engine_is_reproducible() -> None:
+    """Verify sampling returns one row per engine and honours the seed."""
+    df = prepare_features(load_data("train_FD001.txt"), is_train=True)
+
+    first = sample_one_row_per_engine(df, seed=7)
+    repeat = sample_one_row_per_engine(df, seed=7)
+    other = sample_one_row_per_engine(df, seed=8)
+
+    assert sorted(first["engine_id"]) == sorted(df["engine_id"].unique())
+    assert first["cycle"].tolist() == repeat["cycle"].tolist()
+    assert first["cycle"].tolist() != other["cycle"].tolist()
+
+
+def test_run_experiment_logs_comparable_metrics(tmp_path: Path) -> None:
+    """Verify a run is logged and NASA scores are normalized per engine."""
+    tracking_uri = tmp_path.as_uri()
+
+    metrics = run_experiment(tracking_uri=tracking_uri)
+
+    client = MlflowClient(tracking_uri=tracking_uri)
+    experiment = client.get_experiment_by_name(EXPERIMENT_NAME)
+    runs = client.search_runs([experiment.experiment_id])
+
+    assert len(runs) == 1
+    assert runs[0].data.metrics == metrics
+    assert runs[0].data.params["window"] == "5"
+    assert client.list_artifacts(runs[0].info.run_id, "model")
+
+    # Raw labels keep the 11 engines above the cap, so RMSE must differ.
+    assert metrics["test_rmse_raw"] != metrics["test_rmse"]
+    assert metrics["test_nasa_per_engine"] == metrics["test_nasa_score"] / 100
+    # A sum over every validation row would be in the tens of thousands.
+    assert metrics["val_nasa_per_engine"] < 100
 

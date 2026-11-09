@@ -15,8 +15,8 @@ end-to-end machine learning engineering.
 | Data preprocessing (RUL & cleaning) | ✅ Completed |
 | Feature engineering | ✅ Completed |
 | Baseline model (XGBoost / LightGBM) | ✅ Completed |
-| Experiment tracking (MLflow) | 🔄 Next |
-| Model serving (FastAPI) | ⬜ Not started |
+| Experiment tracking (MLflow) | ✅ Completed |
+| Model serving (FastAPI) | 🔄 Next |
 | Drift monitoring (Evidently) | ⬜ Not started |
 | Dashboard (Streamlit) | ⬜ Not started |
 | CI/CD (GitHub Actions) | ⬜ Not started |
@@ -59,7 +59,25 @@ how many cycles remain before failure.
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+
+# Train the baseline and log the run to MLflow
+python -m src.models.train
+mlflow ui --backend-store-uri ./mlruns
 ```
+
+## Baseline Results (FD001)
+
+LightGBM with 47 features, trained on 80 engines and validated on 20 held-out
+engines. Test scores use the last recorded cycle of each of the 100 test engines.
+
+| Evaluation | RMSE (cycles) | NASA score |
+|------------|---------------|------------|
+| Test, labels clipped at 125 | 17.17 | 922 |
+| Test, raw labels | 18.16 | 955 |
+| Validation, random cut-off per engine (mean of 50 draws) | 18.75 | 14.56 per engine |
+
+The test NASA score per engine is 9.22 with clipped labels, for comparison with
+the validation row.
 
 ## License
 
