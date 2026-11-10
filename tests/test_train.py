@@ -54,7 +54,8 @@ def test_get_feature_columns_excludes_metadata() -> None:
     # Active sensors and rolling features must be included
     assert "sensor_2" in feature_cols
     assert "sensor_2_roll_mean_5" in feature_cols
-    assert len(feature_cols) == 47
+    assert "sensor_2_trend_30" in feature_cols
+    assert len(feature_cols) == 62
 
 
 def test_baseline_model_training_and_evaluation() -> None:

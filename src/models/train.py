@@ -11,7 +11,7 @@ from sklearn.model_selection import KFold
 
 from src.data.loader import DATASET_PATH, PROJECT_ROOT, load_data
 from src.evaluation.metrics import compute_rmse, evaluate_predictions
-from src.features.build_features import prepare_features
+from src.features.build_features import TREND_LAG, prepare_features
 
 logger = logging.getLogger(__name__)
 
@@ -255,6 +255,7 @@ def run_experiment(
                 "model_type": "LightGBM",
                 **BASELINE_PARAMS,
                 "window": window,
+                "trend_lag": TREND_LAG,
                 "clip_threshold": clip_threshold,
                 "n_splits": n_splits,
                 "cv_seed": cv_seed,

@@ -1,5 +1,7 @@
 """Unit tests for the feature engineering module."""
 
+import pandas as pd
+
 from src.data.loader import load_data
 from src.data.preprocessing import drop_constant_columns
 from src.features.build_features import add_rolling_features, prepare_features
@@ -50,7 +52,7 @@ def test_no_data_leakage_between_engines() -> None:
 
 
 def test_prepare_features_train() -> None:
-    """Verify full pipeline on training data generates RUL and all 50 features."""
+    """Verify full pipeline on training data generates RUL and all 65 columns."""
     df = load_data("train_FD001.txt")
     df_ready = prepare_features(df, is_train=True, window=5, clip_threshold=125)
 
@@ -58,8 +60,8 @@ def test_prepare_features_train() -> None:
     assert "RUL" in df_ready.columns
     assert df_ready["RUL"].max() == 125
 
-    # 15 sensors + 30 rolling features + 2 settings + 2 meta + 1 RUL = 50 cols
-    assert df_ready.shape[1] == 50
+    # 15 sensors + 30 rolling + 15 trend + 2 settings + 2 meta + 1 RUL = 65 cols
+    assert df_ready.shape[1] == 65
     assert df_ready.isnull().sum().sum() == 0
 
 
@@ -70,7 +72,33 @@ def test_prepare_features_test_set() -> None:
 
     # Test data should NOT have an RUL target column
     assert "RUL" not in df_ready_test.columns
-    assert df_ready_test.shape[1] == 49
+    assert df_ready_test.shape[1] == 64
     assert df_ready_test.isnull().sum().sum() == 0
+
+
+def test_trend_features_values_and_engine_isolation() -> None:
+    """Verify trend values, and that each engine starts from zero."""
+    df = prepare_features(load_data("train_FD001.txt"), is_train=True)
+    engine_2 = df[df["engine_id"] == 2].set_index("cycle")
+
+    # Fewer than 30 earlier cycles in this engine, so nothing to compare with.
+    assert (engine_2.loc[1:30, "sensor_2_trend_30"] == 0.0).all()
+
+    expected = (
+        engine_2.loc[31, "sensor_2_roll_mean_5"]
+        - engine_2.loc[1, "sensor_2_roll_mean_5"]
+    )
+    assert engine_2.loc[31, "sensor_2_trend_30"] == expected
+
+
+def test_features_do_not_use_future_cycles() -> None:
+    """Verify removing later cycles leaves earlier feature values unchanged."""
+    engine = load_data("train_FD001.txt").query("engine_id == 1")
+    cut = 100
+
+    full = prepare_features(engine, is_train=False)
+    truncated = prepare_features(engine[engine["cycle"] <= cut], is_train=False)
+
+    pd.testing.assert_frame_equal(full[full["cycle"] <= cut], truncated)
 
 

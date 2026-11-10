@@ -67,18 +67,24 @@ mlflow ui --backend-store-uri ./mlruns
 
 ## Baseline Results (FD001)
 
-LightGBM with 47 features. Settings are scored with 5-fold cross-validation
-grouped by engine, using random cut-off cycles averaged over 50 draws. The final
-model is then trained on all 100 training engines and evaluated on the last
-recorded cycle of each of the 100 test engines.
+LightGBM with 62 features, including 30-cycle sensor trends. Settings are scored
+with 5-fold cross-validation grouped by engine, using random cut-off cycles
+averaged over 50 draws. The final model is then trained on all 100 training
+engines and evaluated on the last recorded cycle of each of the 100 test engines.
 
 | Evaluation | RMSE (cycles) | NASA score per engine |
 |------------|---------------|-----------------------|
-| Cross-validation (mean ± std across folds) | 18.59 ± 1.46 | 15.77 ± 7.08 |
-| Test, labels clipped at 125 | 17.08 | 8.55 |
-| Test, raw labels | 18.08 | 8.87 |
+| Cross-validation (mean ± std across folds) | 12.01 ± 0.49 | 3.00 ± 0.52 |
+| Test, labels clipped at 125 | 13.18 | 2.83 |
+| Test, raw labels | 14.44 | 3.16 |
 
-Total test NASA score is 855 with clipped labels and 887 with raw labels.
+Total test NASA score is 283 with clipped labels and 316 with raw labels.
+Cross-validated RMSE on rows with RUL under 50 is 7.11 ± 0.51.
+
+Before adding the trend features, the same model scored a test RMSE of 17.08 and
+a total NASA score of 855. Test scores were viewed while diagnosing an earlier
+window-size comparison, so they are not a fully untouched estimate. Feature and
+settings choices were made from cross-validation.
 
 ## License
 

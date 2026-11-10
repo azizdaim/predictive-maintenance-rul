@@ -4,6 +4,9 @@ import pandas as pd
 
 from src.data.preprocessing import add_rul_target, drop_constant_columns
 
+# Shortest test engine has 31 cycles, so this look-back is available for all of them
+TREND_LAG = 30
+
 
 def add_rolling_features(
     df: pd.DataFrame,
@@ -38,11 +41,42 @@ def add_rolling_features(
     return df_out
 
 
+def add_trend_features(
+    df: pd.DataFrame,
+    sensor_cols: list[str],
+    window: int = 5,
+    lag: int = TREND_LAG,
+) -> pd.DataFrame:
+    """Add how much each sensor's rolling mean changed over the last `lag` cycles.
+
+    Rolling means are used instead of raw readings to reduce noise. Rows with
+    fewer than `lag` earlier cycles in their engine are filled with 0.0.
+
+    Args:
+        df: DataFrame containing 'engine_id' and rolling mean columns.
+        sensor_cols: Sensor column names that already have rolling means.
+        window: Window used to compute the rolling means.
+        lag: Number of cycles to look back.
+
+    Returns:
+        pd.DataFrame: A copy of the DataFrame with new trend columns added.
+    """
+    df_out = df.copy()
+    by_engine = df_out.groupby("engine_id")
+
+    for col in sensor_cols:
+        trend = by_engine[f"{col}_roll_mean_{window}"].diff(lag)
+        df_out[f"{col}_trend_{lag}"] = trend.fillna(0.0)
+
+    return df_out
+
+
 def prepare_features(
     df: pd.DataFrame,
     is_train: bool = True,
     window: int = 5,
     clip_threshold: int | None = 125,
+    trend_lag: int = TREND_LAG,
 ) -> pd.DataFrame:
     """Run full feature engineering pipeline on raw C-MAPSS telemetry.
 
@@ -51,9 +85,10 @@ def prepare_features(
         is_train: Whether this is training data (if True, computes RUL target).
         window: Rolling window size. Default is 5.
         clip_threshold: Piecewise RUL clipping cap. Default is 125.
+        trend_lag: Number of cycles the trend features look back.
 
     Returns:
-        pd.DataFrame: Cleaned DataFrame with engineered rolling features and RUL.
+        pd.DataFrame: Cleaned DataFrame with rolling and trend features, and RUL.
     """
     # 1. Drop the 7 dead/constant sensors
     df_clean = drop_constant_columns(df)
@@ -68,4 +103,7 @@ def prepare_features(
     # 4. Compute rolling mean and std for active sensors
     df_featured = add_rolling_features(df_clean, sensor_cols=sensor_cols, window=window)
 
-    return df_featured
+    # 5. Add how much each sensor has drifted over the longer term
+    return add_trend_features(
+        df_featured, sensor_cols=sensor_cols, window=window, lag=trend_lag
+    )
