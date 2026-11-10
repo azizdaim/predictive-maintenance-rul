@@ -1,7 +1,9 @@
 """Unit tests for model training and evaluation module."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
+import numpy as np
 import pandas as pd
 import pytest
 from mlflow.tracking import MlflowClient
@@ -97,12 +99,18 @@ def test_cross_validation_keeps_engines_separate(
     df = prepare_features(load_data("train_FD001.txt"), is_train=True)
     train_folds: list[set[int]] = []
     val_folds: list[set[int]] = []
+    predicted_rows: list[int] = []
 
-    def fake_train(x_train: pd.DataFrame, y_train: pd.Series) -> None:
+    def fake_predict(x: pd.DataFrame) -> np.ndarray:
+        predicted_rows.append(len(x))
+        return np.zeros(len(x))
+
+    def fake_train(x_train: pd.DataFrame, y_train: pd.Series) -> SimpleNamespace:
         train_folds.append(set(df.loc[x_train.index, "engine_id"]))
+        return SimpleNamespace(predict=fake_predict)
 
     def fake_evaluate(
-        model: None, val_df: pd.DataFrame, feature_cols: list[str]
+        model: SimpleNamespace, val_df: pd.DataFrame, feature_cols: list[str]
     ) -> dict[str, float]:
         val_folds.append(set(val_df["engine_id"]))
         return {"rmse": 1.0, "nasa_per_engine": 2.0}
@@ -122,6 +130,10 @@ def test_cross_validation_keeps_engines_separate(
     assert metrics["cv_rmse_mean"] == 1.0
     assert metrics["cv_rmse_std"] == 0.0
     assert metrics["cv_nasa_per_engine_mean"] == 2.0
+
+    # Every engine is validated once, so each near-failure row is scored once.
+    assert sum(predicted_rows) == (df["RUL"] < 50).sum()
+    assert metrics["cv_near_failure_rmse_mean"] > 0.0
 
 
 def test_run_experiment_logs_cv_and_final_model(tmp_path: Path) -> None:

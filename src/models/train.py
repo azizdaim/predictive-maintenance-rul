@@ -10,7 +10,7 @@ from mlflow.models import infer_signature
 from sklearn.model_selection import KFold
 
 from src.data.loader import DATASET_PATH, PROJECT_ROOT, load_data
-from src.evaluation.metrics import evaluate_predictions
+from src.evaluation.metrics import compute_rmse, evaluate_predictions
 from src.features.build_features import prepare_features
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,9 @@ DEFAULT_TRACKING_URI = (PROJECT_ROOT / "mlruns").as_uri()
 
 # With only 20 validation engines, a single draw of cut-off cycles is very noisy
 VAL_NUM_DRAWS = 50
+
+# Rows with less RUL than this count as close to failure
+NEAR_FAILURE_RUL = 50
 
 BASELINE_PARAMS = {
     "n_estimators": 100,
@@ -125,13 +128,14 @@ def cross_validate_by_engine(
         seed: Seed for shuffling engines into folds.
 
     Returns:
-        dict[str, float]: Mean and std of RMSE and NASA score per engine.
+        dict[str, float]: Mean and std of RMSE, NASA score per engine, and
+            RMSE on rows close to failure.
     """
     engines = df["engine_id"].unique()
     feature_cols = get_feature_columns(df)
     kfold = KFold(n_splits=n_splits, shuffle=True, random_state=seed)
 
-    rmses, nasas = [], []
+    rmses, nasas, near_failure_rmses = [], [], []
     for train_idx, val_idx in kfold.split(engines):
         train_df = df[df["engine_id"].isin(engines[train_idx])]
         val_df = df[df["engine_id"].isin(engines[val_idx])]
@@ -142,11 +146,18 @@ def cross_validate_by_engine(
         rmses.append(scores["rmse"])
         nasas.append(scores["nasa_per_engine"])
 
+        # Uses every near-failure row, because a single draw per engine has few
+        near_failure = val_df[val_df["RUL"] < NEAR_FAILURE_RUL]
+        preds = model.predict(near_failure[feature_cols])
+        near_failure_rmses.append(compute_rmse(near_failure["RUL"], preds))
+
     return {
         "cv_rmse_mean": float(np.mean(rmses)),
         "cv_rmse_std": float(np.std(rmses)),
         "cv_nasa_per_engine_mean": float(np.mean(nasas)),
         "cv_nasa_per_engine_std": float(np.std(nasas)),
+        "cv_near_failure_rmse_mean": float(np.mean(near_failure_rmses)),
+        "cv_near_failure_rmse_std": float(np.std(near_failure_rmses)),
     }
 
 
