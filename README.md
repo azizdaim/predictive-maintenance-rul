@@ -81,12 +81,16 @@ engines and evaluated on the last recorded cycle of each of the 100 test engines
 
 | Evaluation | RMSE (cycles) | NASA score per engine |
 |------------|---------------|-----------------------|
-| Cross-validation (mean ± std across folds) | 12.01 ± 0.49 | 3.00 ± 0.52 |
-| Test, labels clipped at 125 | 13.18 | 2.83 |
-| Test, raw labels | 14.44 | 3.16 |
+| Cross-validation (mean ± std across folds) | 11.97 ± 0.54 | 2.92 ± 0.50 |
+| Test, labels clipped at 125 | 13.22 | 2.93 |
+| Test, raw labels | 14.49 | 3.25 |
 
-Total test NASA score is 283 with clipped labels and 316 with raw labels.
-Cross-validated RMSE on rows with RUL under 50 is 7.11 ± 0.51.
+Total test NASA score is 293 with clipped labels and 325 with raw labels.
+Cross-validated RMSE on rows with RUL under 50 is 6.87 ± 0.46.
+
+LightGBM settings (depth 5, learning rate 0.03, 300 trees) were chosen from a
+27-setting grid. They beat the previous settings on all five re-check shuffles,
+but the gain is small, about 0.1 cycles of cross-validated RMSE.
 
 Before adding the trend features, the same model scored a test RMSE of 17.08 and
 a total NASA score of 855. Test scores were viewed while diagnosing an earlier

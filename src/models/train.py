@@ -27,9 +27,10 @@ VAL_NUM_DRAWS = 50
 # Rows with less RUL than this count as close to failure
 NEAR_FAILURE_RUL = 50
 
+# Chosen by a 27-setting grid on engine-grouped cross-validation
 BASELINE_PARAMS = {
-    "n_estimators": 100,
-    "learning_rate": 0.05,
+    "n_estimators": 300,
+    "learning_rate": 0.03,
     "max_depth": 5,
     "random_state": 42,
     "verbose": -1,
