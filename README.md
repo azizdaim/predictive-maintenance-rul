@@ -1,20 +1,21 @@
 # Predictive Maintenance — Turbofan Engine RUL Prediction
 
 Predict the **Remaining Useful Life (RUL)** of turbofan engines using NASA's
-[C-MAPSS dataset](https://data.nasa.gov/Aerospace/CMAPSS-Jet-Engine-Simulated-Data/ff5v-kuh6/about_data).
+[C-MAPSS dataset](https://www.nasa.gov/intelligent-systems-division/discovery-and-systems-health/pcoe/pcoe-data-set-repository/).
 
 ## Overview
 
-This project builds a complete ML pipeline — from raw sensor data to a
-production-ready API with monitoring — as a portfolio piece demonstrating
-end-to-end machine learning engineering.
+This portfolio project is building an end-to-end ML system, from raw sensor
+data to a served model with monitoring and a dashboard. The data pipeline,
+model, evaluation, and experiment tracking are complete. Serving, monitoring,
+and deployment are in progress, as shown below.
 
 | Stage | Status |
 |-------|--------|
 | Data loading & exploration | ✅ Completed |
 | Data preprocessing (RUL & cleaning) | ✅ Completed |
-| Feature engineering | ✅ Completed |
-| Baseline model (XGBoost / LightGBM) | ✅ Completed |
+| Feature engineering (rolling and trend features) | ✅ Completed |
+| Model (LightGBM) with engine-grouped cross-validation | ✅ Completed |
 | Experiment tracking (MLflow) | ✅ Completed |
 | Model serving (FastAPI) | 🔄 Next |
 | Drift monitoring (Evidently) | ⬜ Not started |
@@ -36,21 +37,17 @@ how many cycles remain before failure.
 ## Project Structure
 
 ```
-├── data/                   # Raw & processed data (gitignored)
-│   ├── raw/
-│   └── processed/
-├── notebooks/              # Exploration notebooks
-├── src/                    # Source code
+├── data/raw/               # C-MAPSS text files (gitignored, see Quick Start)
+├── notebooks/              # Exploratory data analysis
+├── src/
 │   ├── data/               # Data loading & preprocessing
-│   ├── features/           # Feature engineering
-│   ├── models/             # Model training & selection
-│   ├── evaluation/         # Metrics & evaluation utilities
-│   └── api/                # FastAPI serving
-├── tests/                  # Unit & integration tests
-├── .github/workflows/      # CI/CD
-├── Dockerfile
-├── requirements.txt
-└── README.md
+│   ├── features/           # Rolling and trend features
+│   ├── models/             # Training, cross-validation, MLflow logging
+│   ├── evaluation/         # RMSE and NASA scoring
+│   └── api/                # FastAPI serving (planned)
+├── tests/                  # Unit tests (pytest)
+├── pyproject.toml          # Ruff and pytest configuration
+└── requirements.txt
 ```
 
 ## Quick Start
@@ -60,12 +57,22 @@ python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Train the baseline and log the run to MLflow
+# Download the C-MAPSS data from NASA's public repository into data/raw
+mkdir -p data/raw
+curl -L -o cmapss.zip "https://phm-datasets.s3.amazonaws.com/NASA/6.+Turbofan+Engine+Degradation+Simulation+Data+Set.zip"
+unzip -j cmapss.zip "*/CMAPSSData.zip"
+unzip -j CMAPSSData.zip "train_*" "test_*" "RUL_*" -d data/raw
+rm cmapss.zip CMAPSSData.zip
+
+# Run the tests
+pytest
+
+# Train the model and log the run to MLflow
 python -m src.models.train
 mlflow ui --backend-store-uri ./mlruns
 ```
 
-## Baseline Results (FD001)
+## Results (FD001)
 
 LightGBM with 62 features, including 30-cycle sensor trends. Settings are scored
 with 5-fold cross-validation grouped by engine, using random cut-off cycles
@@ -88,5 +95,5 @@ settings choices were made from cross-validation.
 
 ## License
 
-MIT
+[MIT](LICENSE)
 
