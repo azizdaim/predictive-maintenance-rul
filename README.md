@@ -7,8 +7,8 @@ Predict the **Remaining Useful Life (RUL)** of turbofan engines using NASA's
 
 This portfolio project is building an end-to-end ML system, from raw sensor
 data to a served model with monitoring and a dashboard. The data pipeline,
-model, evaluation, and experiment tracking are complete. Serving, monitoring,
-and deployment are in progress, as shown below.
+model, evaluation, experiment tracking, and a prediction API are complete. The
+dashboard, monitoring, and deployment are in progress, as shown below.
 
 | Stage | Status |
 |-------|--------|
@@ -17,9 +17,9 @@ and deployment are in progress, as shown below.
 | Feature engineering (rolling and trend features) | ✅ Completed |
 | Model (LightGBM) with engine-grouped cross-validation | ✅ Completed |
 | Experiment tracking (MLflow) | ✅ Completed |
-| Model serving (FastAPI) | 🔄 Next |
+| Model serving (FastAPI) | ✅ Completed |
 | Drift monitoring (Evidently) | ⬜ Not started |
-| Dashboard (Streamlit) | ⬜ Not started |
+| Dashboard (Streamlit) | 🔄 Next |
 | CI/CD (GitHub Actions) | ⬜ Not started |
 | Containerization (Docker) | ⬜ Not started |
 
@@ -44,7 +44,7 @@ how many cycles remain before failure.
 │   ├── features/           # Rolling and trend features
 │   ├── models/             # Training, cross-validation, MLflow logging
 │   ├── evaluation/         # RMSE and NASA scoring
-│   └── api/                # FastAPI serving (planned)
+│   └── api/                # FastAPI prediction service
 ├── tests/                  # Unit tests (pytest)
 ├── pyproject.toml          # Ruff and pytest configuration
 └── requirements.txt
@@ -70,7 +70,22 @@ pytest
 # Train the model and log the run to MLflow
 python -m src.models.train
 mlflow ui --backend-store-uri ./mlruns
+
+# Serve predictions from the trained model, then open http://127.0.0.1:8000/docs
+uvicorn src.api.main:app --reload
 ```
+
+## API
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/health` | GET | Reports that the service is running |
+| `/predict` | POST | Predicts RUL at the latest cycle from an engine's raw sensor history |
+
+`/predict` takes a list of cycles, oldest first, each with the cycle number,
+3 settings, and 21 sensors in the C-MAPSS format. It reuses the training feature
+pipeline and returns the predicted RUL, capped at 125. Histories of 30 cycles or
+fewer get a warning, because the trend features need a longer history.
 
 ## Results (FD001)
 
