@@ -141,7 +141,11 @@ def test_run_experiment_logs_cv_and_final_model(tmp_path: Path) -> None:
     """Verify a run logs cross-validation metrics and the final model."""
     tracking_uri = tmp_path.as_uri()
 
-    metrics = run_experiment(tracking_uri=tracking_uri)
+    model_path = tmp_path / "model.joblib"
+
+    metrics = run_experiment(tracking_uri=tracking_uri, model_path=model_path)
+
+    assert model_path.exists()
 
     client = MlflowClient(tracking_uri=tracking_uri)
     experiment = client.get_experiment_by_name(EXPERIMENT_NAME)

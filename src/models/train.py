@@ -1,7 +1,9 @@
 """Model training and evaluation pipeline for turbofan RUL prediction."""
 
 import logging
+from pathlib import Path
 
+import joblib
 import mlflow
 import numpy as np
 import pandas as pd
@@ -20,6 +22,9 @@ METADATA_COLS = ["engine_id", "cycle", "RUL"]
 
 EXPERIMENT_NAME = "turbofan_rul_fd001"
 DEFAULT_TRACKING_URI = (PROJECT_ROOT / "mlruns").as_uri()
+
+# Fixed location of the latest final model, loaded by the API
+MODEL_PATH = PROJECT_ROOT / "models" / "rul_model.joblib"
 
 # With only 20 validation engines, a single draw of cut-off cycles is very noisy
 VAL_NUM_DRAWS = 50
@@ -223,6 +228,7 @@ def run_experiment(
     n_splits: int = 5,
     cv_seed: int = 42,
     tracking_uri: str = DEFAULT_TRACKING_URI,
+    model_path: Path = MODEL_PATH,
 ) -> dict[str, float]:
     """Cross-validate the baseline, train a final model, and log to MLflow.
 
@@ -235,6 +241,7 @@ def run_experiment(
         n_splits: Number of cross-validation folds.
         cv_seed: Seed for shuffling engines into folds.
         tracking_uri: MLflow tracking location.
+        model_path: Where to save the final model for serving.
 
     Returns:
         dict[str, float]: All metrics logged for the run.
@@ -288,6 +295,10 @@ def run_experiment(
             artifact_path="model",
             signature=infer_signature(x_train, model.predict(x_train)),
         )
+
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(model, model_path)
+    logger.info("Saved final model to %s", model_path)
 
     return metrics
 
