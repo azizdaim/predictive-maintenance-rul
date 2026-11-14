@@ -1,6 +1,8 @@
 """Model training and evaluation pipeline for turbofan RUL prediction."""
 
+import json
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 
 import joblib
@@ -25,6 +27,11 @@ DEFAULT_TRACKING_URI = (PROJECT_ROOT / "mlruns").as_uri()
 
 # Fixed location of the latest final model, loaded by the API
 MODEL_PATH = PROJECT_ROOT / "models" / "rul_model.joblib"
+
+
+def metrics_path_for(model_path: Path) -> Path:
+    """Return where a model's evaluation summary is saved, next to the model."""
+    return model_path.with_name(f"{model_path.stem}_metrics.json")
 
 # With only 20 validation engines, a single draw of cut-off cycles is very noisy
 VAL_NUM_DRAWS = 50
@@ -298,7 +305,18 @@ def run_experiment(
 
     model_path.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(model, model_path)
-    logger.info("Saved final model to %s", model_path)
+    metrics_path_for(model_path).write_text(
+        json.dumps(
+            {
+                "metrics": metrics,
+                "n_features": len(x_train.columns),
+                "n_train_engines": int(df["engine_id"].nunique()),
+                "trained_at": datetime.now(UTC).isoformat(timespec="seconds"),
+            },
+            indent=2,
+        )
+    )
+    logger.info("Saved final model and metrics to %s", model_path.parent)
 
     return metrics
 

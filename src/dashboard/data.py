@@ -6,10 +6,17 @@ import streamlit as st
 from src.dashboard.client import (
     API_URL,
     fetch_history_predictions,
+    fetch_model_info,
     fleet_table,
     load_test_engines,
     true_rul_by_cycle,
 )
+
+
+@st.cache_data(ttl="10m", show_spinner=False)
+def get_model_info() -> dict:
+    """Fetch the served model's saved evaluation results."""
+    return fetch_model_info()
 
 
 @st.cache_data

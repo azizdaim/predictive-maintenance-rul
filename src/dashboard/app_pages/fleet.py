@@ -17,6 +17,11 @@ BAND_HELP = {
     "Healthy": f"Predicted RUL of {WATCH_BELOW} cycles or more.",
 }
 
+st.title("Fleet overview", icon=":material/dashboard:")
+st.caption(
+    "All 100 NASA C-MAPSS FD001 test engines, ranked by predicted remaining life."
+)
+
 try:
     fleet = get_fleet()
 except httpx.HTTPError:

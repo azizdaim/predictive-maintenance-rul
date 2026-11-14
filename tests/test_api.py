@@ -122,6 +122,26 @@ def test_invalid_requests_are_rejected(
     assert response.status_code == 422
 
 
+def test_model_info_reports_saved_metrics(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify /model/info returns the metrics saved next to the model."""
+    model_path = tmp_path / "rul_model.joblib"
+    (tmp_path / "rul_model_metrics.json").write_text(
+        '{"metrics": {"test_rmse": 13.2}, "n_features": 62, '
+        '"n_train_engines": 100, "trained_at": "2026-11-14T00:00:00+00:00"}'
+    )
+    monkeypatch.setattr(api, "MODEL_PATH", model_path)
+
+    response = TestClient(api.app).get("/model/info")
+
+    assert response.status_code == 200
+    assert response.json()["metrics"]["test_rmse"] == 13.2
+
+    monkeypatch.setattr(api, "MODEL_PATH", tmp_path / "missing.joblib")
+    assert TestClient(api.app).get("/model/info").status_code == 503
+
+
 def test_missing_model_file_returns_503(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, test_engines: pd.DataFrame
 ) -> None:

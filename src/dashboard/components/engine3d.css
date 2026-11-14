@@ -1,0 +1,43 @@
+.engine-root {
+  position: relative;
+  width: 100%;
+  border-radius: var(--st-base-radius);
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 60% 45%, rgba(34, 211, 238, 0.14), transparent 60%),
+    var(--st-secondary-background-color);
+  border: 1px solid var(--st-border-color);
+  cursor: grab;
+  user-select: none;
+}
+.engine-root:active { cursor: grabbing; }
+.engine-root canvas { display: block; width: 100%; height: 100%; }
+.hint, .chip, .tooltip, .fallback {
+  position: absolute;
+  font-family: var(--st-font);
+  color: var(--st-text-color);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+.hint { top: 12px; left: 14px; opacity: 0.6; letter-spacing: 0.02em; }
+.chip {
+  bottom: 12px; left: 14px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(10, 15, 28, 0.72);
+  border: 1px solid var(--st-border-color);
+  backdrop-filter: blur(6px);
+}
+.dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 10px currentColor; }
+.tooltip {
+  max-width: 240px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(10, 15, 28, 0.9);
+  border: 1px solid var(--st-primary-color);
+  line-height: 1.35;
+}
+.tooltip b { color: var(--st-primary-color); display: block; margin-bottom: 2px; }
+.fallback { inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0.7; }
+[hidden] { display: none !important; }

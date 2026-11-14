@@ -1,6 +1,8 @@
 """Tests for the dashboard helpers and the Streamlit page."""
 
+import json
 from collections.abc import Iterator
+from pathlib import Path
 
 import httpx
 import pandas as pd
@@ -22,18 +24,38 @@ from src.dashboard.client import (
 APP_PATH = "../src/dashboard/app.py"
 
 
+SAVED_METRICS = {
+    "metrics": {
+        "cv_rmse_mean": 11.97,
+        "cv_rmse_std": 0.54,
+        "cv_near_failure_rmse_mean": 6.87,
+        "test_rmse": 13.22,
+        "test_rmse_raw": 14.49,
+    },
+    "n_features": 62,
+    "n_train_engines": 100,
+    "trained_at": "2026-11-14T00:00:00+00:00",
+}
+
+
 @pytest.fixture
 def api_through_httpx(
-    model: LGBMRegressor, monkeypatch: pytest.MonkeyPatch
+    model: LGBMRegressor, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> Iterator[None]:
     """Route the dashboard's HTTP calls to the real API app, in-process."""
     api.app.dependency_overrides[api.get_model] = lambda: model
+    (tmp_path / "rul_model_metrics.json").write_text(json.dumps(SAVED_METRICS))
+    monkeypatch.setattr(api, "MODEL_PATH", tmp_path / "rul_model.joblib")
     test_client = TestClient(api.app)
 
     def fake_post(url: str, **kwargs: object) -> httpx.Response:
         return test_client.post(url.removeprefix(API_URL), **kwargs)
 
+    def fake_get(url: str, **kwargs: object) -> httpx.Response:
+        return test_client.get(url.removeprefix(API_URL), **kwargs)
+
     monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr(httpx, "get", fake_get)
     st.cache_data.clear()
     yield
     st.cache_data.clear()
@@ -89,9 +111,22 @@ def test_fleet_table_ranks_most_urgent_first() -> None:
 
 
 @pytest.mark.usefixtures("api_through_httpx")
-def test_fleet_page_summarizes_all_engines() -> None:
-    """Verify the landing page scores all 100 engines and counts the bands."""
+def test_home_page_shows_live_results() -> None:
+    """Verify the landing page shows saved model results and fleet numbers."""
     at = AppTest.from_file(APP_PATH, default_timeout=60).run()
+
+    assert not at.exception
+    metrics = {m.label: m.value for m in at.metric}
+    assert metrics["Test error (RMSE)"] == "13.2 cycles"
+    assert metrics["Engines monitored"] == "100"
+    assert metrics["Cross-validated RMSE"] == "12.0 ± 0.5"
+
+
+@pytest.mark.usefixtures("api_through_httpx")
+def test_fleet_page_summarizes_all_engines() -> None:
+    """Verify the fleet page scores all 100 engines and counts the bands."""
+    at = AppTest.from_file(APP_PATH, default_timeout=60).run()
+    at.switch_page("app_pages/fleet.py").run()
 
     assert not at.exception
     assert len(at.dataframe[0].value) == 100
@@ -124,10 +159,16 @@ def test_dashboard_explains_when_api_is_down(monkeypatch: pytest.MonkeyPatch) ->
         raise httpx.ConnectError("connection refused")
 
     monkeypatch.setattr(httpx, "post", refuse)
+    monkeypatch.setattr(httpx, "get", refuse)
     st.cache_data.clear()
 
     at = AppTest.from_file(APP_PATH, default_timeout=30).run()
 
+    # The landing page still renders, with a hint instead of live numbers
+    assert not at.exception
+    assert "uvicorn src.api.main:app" in at.info[0].value
+
+    at.switch_page("app_pages/fleet.py").run()
     assert not at.exception
     assert len(at.error) == 1
     assert "uvicorn src.api.main:app" in at.error[0].value

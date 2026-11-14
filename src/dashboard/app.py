@@ -13,10 +13,17 @@ if "engine_id" not in st.session_state:
 page = st.navigation(
     [
         st.Page(
+            "app_pages/home.py",
+            title="Home",
+            icon=":material/home:",
+            default=True,
+            help="What the project does, an interactive 3D engine, and the model's "
+            "headline results.",
+        ),
+        st.Page(
             "app_pages/fleet.py",
             title="Fleet overview",
             icon=":material/dashboard:",
-            default=True,
             help="Every test engine ranked by predicted remaining life, with health "
             "labels and recent trends. Select a row to open that engine.",
         ),
@@ -29,12 +36,6 @@ page = st.navigation(
         ),
     ],
     position="top",
-)
-
-st.title(page.title, icon=page.icon)
-st.caption(
-    "Predicted remaining useful life (RUL) for the 100 NASA C-MAPSS FD001 test "
-    "engines, served by this project's FastAPI model."
 )
 
 page.run()

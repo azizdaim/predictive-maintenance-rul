@@ -14,10 +14,13 @@ from src.dashboard.data import (
 )
 from src.features.build_features import TREND_LAG
 
+st.title("Engine detail", icon=":material/monitoring:")
+st.caption("Predicted vs true remaining life across one engine's recorded history.")
+
 engines = get_test_engines()
 
-with st.sidebar:
-    st.header("Engine")
+picker, timeline = st.columns([1, 3], vertical_alignment="bottom")
+with picker:
     engine_id = st.selectbox(
         "Test engine",
         options=list(range(1, 101)),
@@ -25,7 +28,8 @@ with st.sidebar:
         key="engine_id",
         persist_state="session",
     )
-    last_cycle = int(engines.loc[engines["engine_id"] == engine_id, "cycle"].max())
+last_cycle = int(engines.loc[engines["engine_id"] == engine_id, "cycle"].max())
+with timeline:
     cycle = st.slider(
         "Cycle",
         min_value=1,

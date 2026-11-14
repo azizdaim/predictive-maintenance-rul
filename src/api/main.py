@@ -12,7 +12,7 @@ from lightgbm import LGBMRegressor
 from pydantic import BaseModel, Field, model_validator
 
 from src.features.build_features import TREND_LAG, prepare_features
-from src.models.train import MODEL_PATH
+from src.models.train import MODEL_PATH, metrics_path_for
 
 app = FastAPI(title="Turbofan RUL API")
 
@@ -86,6 +86,15 @@ class HistoryPrediction(BaseModel):
     predictions: list[CyclePrediction]
 
 
+class ModelInfo(BaseModel):
+    """Evaluation results saved with the served model when it was trained."""
+
+    metrics: dict[str, float]
+    n_features: int
+    n_train_engines: int
+    trained_at: str
+
+
 @lru_cache
 def get_model() -> LGBMRegressor:
     """Load the trained model once and reuse it for every request."""
@@ -117,6 +126,18 @@ def predict_every_cycle(history: EngineHistory, model: LGBMRegressor) -> np.ndar
 def health() -> dict[str, str]:
     """Report that the service is running."""
     return {"status": "ok"}
+
+
+@app.get("/model/info")
+def model_info() -> ModelInfo:
+    """Report how the served model scored when it was trained."""
+    path = metrics_path_for(MODEL_PATH)
+    if not path.exists():
+        raise HTTPException(
+            status_code=503,
+            detail="Model metrics not found. Run `python -m src.models.train` first.",
+        )
+    return ModelInfo.model_validate_json(path.read_text())
 
 
 @app.post("/predict")

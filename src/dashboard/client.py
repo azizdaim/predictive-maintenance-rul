@@ -21,6 +21,9 @@ WATCH_BELOW = 60
 # Label colors, most urgent first, so tables and badges stay consistent
 STATUS_COLORS = {"Replace soon": "red", "Watch": "orange", "Healthy": "green"}
 
+# The same colors as hex codes, matching .streamlit/config.toml, for custom visuals
+STATUS_HEX = {"Replace soon": "#F87171", "Watch": "#FB923C", "Healthy": "#34D399"}
+
 
 def load_test_engines() -> pd.DataFrame:
     """Load raw telemetry for the 100 FD001 test engines."""
@@ -66,6 +69,17 @@ def fetch_history_predictions(
     response = httpx.post(f"{api_url}/predict/history", json=payload, timeout=30.0)
     response.raise_for_status()
     return pd.DataFrame(response.json()["predictions"])
+
+
+def fetch_model_info(api_url: str = API_URL) -> dict:
+    """Ask the API how the served model scored when it was trained.
+
+    Raises:
+        httpx.HTTPError: If the API is unreachable or has no saved metrics.
+    """
+    response = httpx.get(f"{api_url}/model/info", timeout=10.0)
+    response.raise_for_status()
+    return response.json()
 
 
 def health_status(predicted_rul: float) -> tuple[str, str]:

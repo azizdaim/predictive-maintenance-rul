@@ -41,3 +41,4 @@ Thumbs.db
 # Model artifacts (track via MLflow instead)
 models/*.pkl
 models/*.joblib
+models/*_metrics.json
