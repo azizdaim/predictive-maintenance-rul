@@ -1,0 +1,105 @@
+"""Tests for the dashboard helpers and the Streamlit page."""
+
+from collections.abc import Iterator
+
+import httpx
+import pandas as pd
+import pytest
+import streamlit as st
+from fastapi.testclient import TestClient
+from lightgbm import LGBMRegressor
+from streamlit.testing.v1 import AppTest
+
+import src.api.main as api
+from src.dashboard.client import (
+    API_URL,
+    fetch_history_predictions,
+    health_status,
+    true_rul_by_cycle,
+)
+
+APP_PATH = "../src/dashboard/app.py"
+
+
+@pytest.fixture
+def api_through_httpx(
+    model: LGBMRegressor, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[None]:
+    """Route the dashboard's HTTP calls to the real API app, in-process."""
+    api.app.dependency_overrides[api.get_model] = lambda: model
+    test_client = TestClient(api.app)
+
+    def fake_post(url: str, **kwargs: object) -> httpx.Response:
+        return test_client.post(url.removeprefix(API_URL), **kwargs)
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    st.cache_data.clear()
+    yield
+    st.cache_data.clear()
+    api.app.dependency_overrides.clear()
+
+
+def test_true_rul_counts_back_from_the_answer_file(test_engines: pd.DataFrame) -> None:
+    """Verify true RUL is the final answer plus the cycles still to come, capped."""
+    rul = true_rul_by_cycle(test_engines).set_index(["engine_id", "cycle"])["true_rul"]
+
+    # Engine 31 has 196 cycles and a true RUL of 8 at its last one
+    assert rul[(31, 196)] == 8
+    assert rul[(31, 150)] == 8 + 46
+    # Early cycles are capped at 125, like the training target
+    assert rul[(31, 1)] == 125
+
+
+@pytest.mark.parametrize(
+    ("predicted", "label"),
+    [(5, "Replace soon"), (29.9, "Replace soon"), (30, "Watch"), (60, "Healthy")],
+)
+def test_health_status_bands(predicted: float, label: str) -> None:
+    """Verify the band edges map to the expected maintenance labels."""
+    assert health_status(predicted)[0] == label
+
+
+@pytest.mark.usefixtures("api_through_httpx")
+def test_fetch_history_predictions_returns_every_cycle(
+    test_engines: pd.DataFrame,
+) -> None:
+    """Verify the client turns the API reply into one row per cycle."""
+    engine = test_engines[test_engines["engine_id"] == 31]
+
+    predictions = fetch_history_predictions(engine)
+
+    assert list(predictions.columns) == ["cycle", "predicted_rul"]
+    assert len(predictions) == 196
+
+
+@pytest.mark.usefixtures("api_through_httpx")
+def test_dashboard_shows_engine_and_updates() -> None:
+    """Verify the page renders metrics and reacts to engine and cycle choices."""
+    at = AppTest.from_file(APP_PATH, default_timeout=30).run()
+
+    assert not at.exception
+    assert at.metric[1].value == "8 cycles"  # engine 31's true RUL at its last cycle
+
+    at.slider[0].set_value(10).run()
+    assert not at.exception
+    assert len(at.warning) == 1  # short-history warning before cycle 31
+
+    at.selectbox[0].set_value(1).run()
+    assert not at.exception
+    assert at.subheader[0].value.startswith("Engine 1 ")
+
+
+def test_dashboard_explains_when_api_is_down(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify a clear error instead of a crash when the API is unreachable."""
+
+    def refuse(url: str, **kwargs: object) -> httpx.Response:
+        raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr(httpx, "post", refuse)
+    st.cache_data.clear()
+
+    at = AppTest.from_file(APP_PATH, default_timeout=30).run()
+
+    assert not at.exception
+    assert len(at.error) == 1
+    assert "uvicorn src.api.main:app" in at.error[0].value
