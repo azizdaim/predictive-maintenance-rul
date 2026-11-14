@@ -42,7 +42,7 @@ how many cycles remain before failure.
 ├── src/
 │   ├── data/               # Data loading & preprocessing
 │   ├── features/           # Rolling and trend features
-│   ├── models/             # Training, cross-validation, MLflow logging
+│   ├── models/             # Training, cross-validation, ablation, MLflow logging
 │   ├── evaluation/         # RMSE and NASA scoring
 │   └── api/                # FastAPI prediction service
 ├── tests/                  # Unit tests (pytest)
@@ -111,6 +111,47 @@ Before adding the trend features, the same model scored a test RMSE of 17.08 and
 a total NASA score of 855. Test scores were viewed while diagnosing an earlier
 window-size comparison, so they are not a fully untouched estimate. Feature and
 settings choices were made from cross-validation.
+
+## Ablation Study
+
+To test which inputs the model actually relies on, each group of features was
+removed in turn and the model was re-scored with the same engine-grouped 5-fold
+cross-validation, repeated over 3 shuffles. A positive change means the model got
+worse without that group. Run it with `python -m src.models.ablation`; full
+results are in [reports/ablation_results.csv](reports/ablation_results.csv).
+
+**By feature type** (full model: RMSE 12.10, near-failure RMSE 6.92)
+
+| Removed | Features | RMSE change | Near-failure change | Worse in |
+|---------|----------|-------------|---------------------|----------|
+| 30-cycle trends | 15 | **+6.62** | **+10.24** | 3 of 3 |
+| Rolling averages | 15 | +0.19 | +0.75 | 3 of 3 |
+| Operating settings | 2 | +0.00 | +0.00 | 2 of 3 |
+| Raw sensor readings | 15 | −0.01 | −0.02 | 1 of 3 |
+| Rolling spreads | 15 | −0.06 | −0.05 | 0 of 3 |
+
+**By engine section** (all features built from that section's sensors)
+
+| Removed | Sensors | RMSE change | Near-failure change | Worse in |
+|---------|---------|-------------|---------------------|----------|
+| High-pressure compressor | 3, 7, 9, 11, 14 | **+2.04** | **+2.46** | 3 of 3 |
+| Fan | 6, 8, 13, 15 | +0.63 | +0.78 | 3 of 3 |
+| Combustor | 12, 17 | +0.38 | +0.73 | 3 of 3 |
+| Low-pressure turbine | 4, 21 | +0.32 | +0.41 | 3 of 3 |
+| Low-pressure compressor | 2 | +0.15 | +0.15 | 3 of 3 |
+| High-pressure turbine | 20 | +0.09 | +0.07 | 3 of 3 |
+
+Findings:
+
+- The 30-cycle trends carry the model. Without them, near-failure error rises from
+  6.9 to 17.2 cycles, which confirms the earlier feature-engineering result with a
+  controlled experiment.
+- Raw readings, rolling spreads, and operating settings can each be removed
+  without loss. FD001 has a single operating condition, so the settings carry no
+  signal. Each group being removable alone does not prove they can all be removed
+  together, because overlapping features can cover for each other.
+- Every engine section matters, consistently across all shuffles. High-pressure
+  compressor sensors matter most, though that group also has the most sensors.
 
 ## License
 

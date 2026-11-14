@@ -1,0 +1,13 @@
+study,variant,features_removed,rmse,near_failure_rmse,nasa_per_engine,rmse_change,near_failure_change,worse_in_shuffles,shuffles
+Baseline,All features,0,12.1,6.923,2.985,0.0,0.0,0,3
+Feature type,Without operating settings,2,12.102,6.925,2.976,0.002,0.001,2,3
+Feature type,Without raw sensor readings,15,12.095,6.9,2.977,-0.005,-0.024,1,3
+Feature type,Without rolling averages,15,12.29,7.67,3.062,0.191,0.746,3,3
+Feature type,Without rolling spreads,15,12.042,6.875,2.945,-0.058,-0.049,0,3
+Feature type,Without 30-cycle trends,15,18.724,17.165,17.806,6.624,10.242,3,3
+Engine section,Without fan,16,12.728,7.704,3.58,0.629,0.781,3,3
+Engine section,Without low-pressure compressor,4,12.251,7.075,3.119,0.151,0.152,3,3
+Engine section,Without high-pressure compressor,20,14.143,9.384,4.356,2.044,2.461,3,3
+Engine section,Without combustor,8,12.483,7.657,3.212,0.383,0.733,3,3
+Engine section,Without high-pressure turbine,4,12.188,6.995,3.044,0.089,0.072,3,3
+Engine section,Without low-pressure turbine,8,12.415,7.336,3.193,0.316,0.412,3,3
