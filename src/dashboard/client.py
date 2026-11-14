@@ -18,6 +18,9 @@ RUL_CAP = 125
 REPLACE_SOON_BELOW = 30
 WATCH_BELOW = 60
 
+# Label colors, most urgent first, so tables and badges stay consistent
+STATUS_COLORS = {"Replace soon": "red", "Watch": "orange", "Healthy": "green"}
+
 
 def load_test_engines() -> pd.DataFrame:
     """Load raw telemetry for the 100 FD001 test engines."""
@@ -68,7 +71,37 @@ def fetch_history_predictions(
 def health_status(predicted_rul: float) -> tuple[str, str]:
     """Map a predicted RUL to a maintenance label and a badge color."""
     if predicted_rul < REPLACE_SOON_BELOW:
-        return "Replace soon", "red"
-    if predicted_rul < WATCH_BELOW:
-        return "Watch", "orange"
-    return "Healthy", "green"
+        label = "Replace soon"
+    elif predicted_rul < WATCH_BELOW:
+        label = "Watch"
+    else:
+        label = "Healthy"
+    return label, STATUS_COLORS[label]
+
+
+def fleet_table(
+    predictions: dict[int, pd.DataFrame], trend_cycles: int = 50
+) -> pd.DataFrame:
+    """Summarize every engine's latest prediction, most urgent first.
+
+    Args:
+        predictions: Per-engine frames with 'cycle' and 'predicted_rul' columns.
+        trend_cycles: How many recent predictions to keep for the trend line.
+
+    Returns:
+        pd.DataFrame: One row per engine, sorted by predicted RUL ascending.
+    """
+    rows = []
+    for engine_id, engine in predictions.items():
+        latest = float(engine["predicted_rul"].iloc[-1])
+        rows.append(
+            {
+                "engine_id": engine_id,
+                "status": health_status(latest)[0],
+                "predicted_rul": latest,
+                "cycles": int(engine["cycle"].iloc[-1]),
+                "trend": engine["predicted_rul"].tail(trend_cycles).tolist(),
+            }
+        )
+    table = pd.DataFrame(rows)
+    return table.sort_values("predicted_rul", ignore_index=True)

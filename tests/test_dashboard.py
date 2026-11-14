@@ -14,6 +14,7 @@ import src.api.main as api
 from src.dashboard.client import (
     API_URL,
     fetch_history_predictions,
+    fleet_table,
     health_status,
     true_rul_by_cycle,
 )
@@ -72,10 +73,37 @@ def test_fetch_history_predictions_returns_every_cycle(
     assert len(predictions) == 196
 
 
+def test_fleet_table_ranks_most_urgent_first() -> None:
+    """Verify the fleet summary sorts by latest prediction and labels each engine."""
+    predictions = {
+        1: pd.DataFrame({"cycle": [1, 2, 3], "predicted_rul": [120.0, 90.0, 70.0]}),
+        2: pd.DataFrame({"cycle": [1, 2], "predicted_rul": [40.0, 12.0]}),
+    }
+
+    table = fleet_table(predictions, trend_cycles=2)
+
+    assert table["engine_id"].tolist() == [2, 1]
+    assert table["status"].tolist() == ["Replace soon", "Healthy"]
+    assert table["cycles"].tolist() == [2, 3]
+    assert table.loc[1, "trend"] == [90.0, 70.0]
+
+
 @pytest.mark.usefixtures("api_through_httpx")
-def test_dashboard_shows_engine_and_updates() -> None:
-    """Verify the page renders metrics and reacts to engine and cycle choices."""
-    at = AppTest.from_file(APP_PATH, default_timeout=30).run()
+def test_fleet_page_summarizes_all_engines() -> None:
+    """Verify the landing page scores all 100 engines and counts the bands."""
+    at = AppTest.from_file(APP_PATH, default_timeout=60).run()
+
+    assert not at.exception
+    assert len(at.dataframe[0].value) == 100
+    total = sum(int(m.value.split()[0]) for m in at.metric)
+    assert total == 100
+
+
+@pytest.mark.usefixtures("api_through_httpx")
+def test_engine_page_shows_engine_and_updates() -> None:
+    """Verify the engine page renders metrics and reacts to engine and cycle."""
+    at = AppTest.from_file(APP_PATH, default_timeout=60).run()
+    at.switch_page("app_pages/engine.py").run()
 
     assert not at.exception
     assert at.metric[1].value == "8 cycles"  # engine 31's true RUL at its last cycle
