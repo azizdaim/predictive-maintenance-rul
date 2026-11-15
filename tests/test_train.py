@@ -15,6 +15,7 @@ from src.models.train import (
     EXPERIMENT_NAME,
     cross_validate_by_engine,
     evaluate_on_test_set,
+    get_candidate_columns,
     get_feature_columns,
     run_experiment,
     sample_one_row_per_engine,
@@ -52,11 +53,16 @@ def test_get_feature_columns_excludes_metadata() -> None:
     assert "cycle" not in feature_cols
     assert "RUL" not in feature_cols
 
-    # Active sensors and rolling features must be included
-    assert "sensor_2" in feature_cols
+    # The model trains on rolling means and trends only (chosen by ablation)
     assert "sensor_2_roll_mean_5" in feature_cols
     assert "sensor_2_trend_30" in feature_cols
-    assert len(feature_cols) == 62
+    assert "sensor_2" not in feature_cols
+    assert "sensor_2_roll_std_5" not in feature_cols
+    assert "setting_1" not in feature_cols
+    assert len(feature_cols) == 30
+
+    # Every engineered feature is still available as a candidate
+    assert len(get_candidate_columns(df_prepared)) == 62
 
 
 def test_baseline_model_training_and_evaluation() -> None:
@@ -149,7 +155,7 @@ def test_run_experiment_logs_cv_and_final_model(tmp_path: Path) -> None:
     assert model_path.exists()
     saved = json.loads((tmp_path / "model_metrics.json").read_text())
     assert saved["metrics"] == pytest.approx(metrics)
-    assert saved["n_features"] == 62
+    assert saved["n_features"] == 30
 
     client = MlflowClient(tracking_uri=tracking_uri)
     experiment = client.get_experiment_by_name(EXPERIMENT_NAME)

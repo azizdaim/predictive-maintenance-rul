@@ -89,19 +89,20 @@ fewer get a warning, because the trend features need a longer history.
 
 ## Results (FD001)
 
-LightGBM with 62 features, including 30-cycle sensor trends. Settings are scored
+LightGBM with 30 features: 5-cycle rolling averages and 30-cycle trends for each
+of the 15 active sensors, a set chosen by the ablation study below. Settings are scored
 with 5-fold cross-validation grouped by engine, using random cut-off cycles
 averaged over 50 draws. The final model is then trained on all 100 training
 engines and evaluated on the last recorded cycle of each of the 100 test engines.
 
 | Evaluation | RMSE (cycles) | NASA score per engine |
 |------------|---------------|-----------------------|
-| Cross-validation (mean ± std across folds) | 11.97 ± 0.54 | 2.92 ± 0.50 |
-| Test, labels clipped at 125 | 13.22 | 2.93 |
-| Test, raw labels | 14.49 | 3.25 |
+| Cross-validation (mean ± std across folds) | 11.90 ± 0.56 | 2.86 ± 0.42 |
+| Test, labels clipped at 125 | 13.07 | 2.85 |
+| Test, raw labels | 14.34 | 3.18 |
 
-Total test NASA score is 293 with clipped labels and 325 with raw labels.
-Cross-validated RMSE on rows with RUL under 50 is 6.87 ± 0.46.
+Total test NASA score is 285 with clipped labels and 318 with raw labels.
+Cross-validated RMSE on rows with RUL under 50 is 6.81 ± 0.42.
 
 LightGBM settings (depth 5, learning rate 0.03, 300 trees) were chosen from a
 27-setting grid. They beat the previous settings on all five re-check shuffles,
@@ -120,7 +121,7 @@ cross-validation, repeated over 3 shuffles. A positive change means the model go
 worse without that group. Run it with `python -m src.models.ablation`; full
 results are in [reports/ablation_results.csv](reports/ablation_results.csv).
 
-**By feature type** (full model: RMSE 12.10, near-failure RMSE 6.92)
+**By feature type** (all 62 candidate features: RMSE 12.10, near-failure RMSE 6.92)
 
 | Removed | Features | RMSE change | Near-failure change | Worse in |
 |---------|----------|-------------|---------------------|----------|
@@ -151,7 +152,8 @@ Findings:
   signal. Because overlapping features can cover for each other, all three were
   also removed together: dropping those 32 features changed RMSE by −0.05 and
   near-failure RMSE by −0.07, worse in 0 of 3 shuffles. A 30-feature model of
-  rolling averages and trends performs as well as the full 62.
+  rolling averages and trends performs as well as the full 62, so the served
+  model now uses those 30.
 - Every engine section matters, consistently across all shuffles. High-pressure
   compressor sensors matter most, though that group also has the most sensors.
 

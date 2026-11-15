@@ -21,7 +21,7 @@ from src.models.train import (
     BASELINE_PARAMS,
     DEFAULT_TRACKING_URI,
     cross_validate_by_engine,
-    get_feature_columns,
+    get_candidate_columns,
 )
 
 logger = logging.getLogger(__name__)
@@ -122,7 +122,12 @@ def run_ablation(
                     result["cv_nasa_per_engine_mean"],
                 ]
                 for result in (
-                    cross_validate_by_engine(reduced, seed=seed) for seed in seeds
+                    cross_validate_by_engine(
+                        reduced,
+                        seed=seed,
+                        feature_cols=get_candidate_columns(reduced),
+                    )
+                    for seed in seeds
                 )
             ]
         )
@@ -153,7 +158,7 @@ def main() -> None:
     """Run both ablation studies, log them to MLflow, and save a report."""
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     df = prepare_features(load_data("train_FD001.txt"), is_train=True)
-    columns = get_feature_columns(df)
+    columns = get_candidate_columns(df)
     by_type = feature_type_groups(columns)
     # Groups that are each harmless to remove alone may still matter together,
     # because overlapping features can cover for one another

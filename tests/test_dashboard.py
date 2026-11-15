@@ -32,7 +32,7 @@ SAVED_METRICS = {
         "test_rmse": 13.22,
         "test_rmse_raw": 14.49,
     },
-    "n_features": 62,
+    "n_features": 30,
     "n_train_engines": 100,
     "trained_at": "2026-11-14T00:00:00+00:00",
 }

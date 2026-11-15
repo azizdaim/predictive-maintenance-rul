@@ -89,9 +89,23 @@ def sample_one_row_per_engine(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
     return df.groupby("engine_id").sample(n=1, random_state=seed).reset_index(drop=True)
 
 
-def get_feature_columns(df: pd.DataFrame) -> list[str]:
-    """Return all feature column names, excluding metadata and target."""
+# Feature kinds the model trains on. The ablation study showed that raw readings,
+# rolling spreads, and settings add nothing once these are present.
+MODEL_FEATURE_MARKERS = ("_roll_mean_", "_trend_")
+
+
+def get_candidate_columns(df: pd.DataFrame) -> list[str]:
+    """Return every engineered feature column, excluding metadata and target."""
     return [c for c in df.columns if c not in METADATA_COLS]
+
+
+def get_feature_columns(df: pd.DataFrame) -> list[str]:
+    """Return the feature columns the model trains on: rolling means and trends."""
+    return [
+        c
+        for c in get_candidate_columns(df)
+        if any(marker in c for marker in MODEL_FEATURE_MARKERS)
+    ]
 
 
 def evaluate_per_engine(
@@ -131,7 +145,10 @@ def evaluate_per_engine(
 
 
 def cross_validate_by_engine(
-    df: pd.DataFrame, n_splits: int = 5, seed: int = 42
+    df: pd.DataFrame,
+    n_splits: int = 5,
+    seed: int = 42,
+    feature_cols: list[str] | None = None,
 ) -> dict[str, float]:
     """Evaluate the baseline with K-fold cross-validation grouped by engine.
 
@@ -139,13 +156,15 @@ def cross_validate_by_engine(
         df: Featured DataFrame containing 'engine_id' and 'RUL'.
         n_splits: Number of folds.
         seed: Seed for shuffling engines into folds.
+        feature_cols: Columns to train on. Defaults to the model's features.
 
     Returns:
         dict[str, float]: Mean and std of RMSE, NASA score per engine, and
             RMSE on rows close to failure.
     """
     engines = df["engine_id"].unique()
-    feature_cols = get_feature_columns(df)
+    if feature_cols is None:
+        feature_cols = get_feature_columns(df)
     kfold = KFold(n_splits=n_splits, shuffle=True, random_state=seed)
 
     rmses, nasas, near_failure_rmses = [], [], []

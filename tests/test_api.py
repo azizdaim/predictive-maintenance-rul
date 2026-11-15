@@ -128,7 +128,7 @@ def test_model_info_reports_saved_metrics(
     """Verify /model/info returns the metrics saved next to the model."""
     model_path = tmp_path / "rul_model.joblib"
     (tmp_path / "rul_model_metrics.json").write_text(
-        '{"metrics": {"test_rmse": 13.2}, "n_features": 62, '
+        '{"metrics": {"test_rmse": 13.2}, "n_features": 30, '
         '"n_train_engines": 100, "trained_at": "2026-11-14T00:00:00+00:00"}'
     )
     monkeypatch.setattr(api, "MODEL_PATH", model_path)
