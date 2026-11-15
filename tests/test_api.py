@@ -9,17 +9,7 @@ from fastapi.testclient import TestClient
 from lightgbm import LGBMRegressor
 
 import src.api.main as api
-from src.data.loader import load_data
 from src.features.build_features import prepare_features
-from src.models.train import get_feature_columns, train_baseline_model
-
-
-@pytest.fixture(scope="module")
-def model() -> LGBMRegressor:
-    """Train one model for the whole module, independent of models/ on disk."""
-    train = prepare_features(load_data("train_FD001.txt"), is_train=True)
-    cols = get_feature_columns(train)
-    return train_baseline_model(train[cols], train["RUL"])
 
 
 @pytest.fixture
@@ -28,12 +18,6 @@ def client(model: LGBMRegressor) -> Iterator[TestClient]:
     api.app.dependency_overrides[api.get_model] = lambda: model
     yield TestClient(api.app)
     api.app.dependency_overrides.clear()
-
-
-@pytest.fixture(scope="module")
-def test_engines() -> pd.DataFrame:
-    """Raw test-set telemetry for all 100 test engines."""
-    return load_data("test_FD001.txt")
 
 
 def engine_payload(
@@ -72,6 +56,24 @@ def test_predict_matches_direct_model(
     assert body["last_cycle"] == 196
     assert body["cycles_received"] == 196
     assert body["warning"] is None
+
+
+def test_history_endpoint_matches_cut_off_requests(
+    client: TestClient, test_engines: pd.DataFrame
+) -> None:
+    """Verify each cycle's prediction equals sending the history cut off there."""
+    response = client.post("/predict/history", json=engine_payload(test_engines, 31))
+
+    assert response.status_code == 200
+    predictions = response.json()["predictions"]
+    assert len(predictions) == 196
+    assert [p["cycle"] for p in predictions] == list(range(1, 197))
+
+    for cut in (10, 50, 196):
+        single = client.post("/predict", json=engine_payload(test_engines, 31, cut))
+        assert predictions[cut - 1]["predicted_rul"] == pytest.approx(
+            single.json()["predicted_rul"]
+        )
 
 
 def test_short_history_returns_warning(
@@ -118,6 +120,26 @@ def test_invalid_requests_are_rejected(
     response = client.post("/predict", json=payload)
 
     assert response.status_code == 422
+
+
+def test_model_info_reports_saved_metrics(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify /model/info returns the metrics saved next to the model."""
+    model_path = tmp_path / "rul_model.joblib"
+    (tmp_path / "rul_model_metrics.json").write_text(
+        '{"metrics": {"test_rmse": 13.2}, "n_features": 62, '
+        '"n_train_engines": 100, "trained_at": "2026-11-14T00:00:00+00:00"}'
+    )
+    monkeypatch.setattr(api, "MODEL_PATH", model_path)
+
+    response = TestClient(api.app).get("/model/info")
+
+    assert response.status_code == 200
+    assert response.json()["metrics"]["test_rmse"] == 13.2
+
+    monkeypatch.setattr(api, "MODEL_PATH", tmp_path / "missing.joblib")
+    assert TestClient(api.app).get("/model/info").status_code == 503
 
 
 def test_missing_model_file_returns_503(

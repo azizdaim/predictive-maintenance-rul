@@ -18,8 +18,8 @@ dashboard, monitoring, and deployment are in progress, as shown below.
 | Model (LightGBM) with engine-grouped cross-validation | ✅ Completed |
 | Experiment tracking (MLflow) | ✅ Completed |
 | Model serving (FastAPI) | ✅ Completed |
+| Dashboard (Streamlit) | 🔄 In progress |
 | Drift monitoring (Evidently) | ⬜ Not started |
-| Dashboard (Streamlit) | 🔄 Next |
 | CI/CD (GitHub Actions) | ⬜ Not started |
 | Containerization (Docker) | ⬜ Not started |
 

@@ -1,5 +1,6 @@
 """Unit tests for model training and evaluation module."""
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -146,6 +147,9 @@ def test_run_experiment_logs_cv_and_final_model(tmp_path: Path) -> None:
     metrics = run_experiment(tracking_uri=tracking_uri, model_path=model_path)
 
     assert model_path.exists()
+    saved = json.loads((tmp_path / "model_metrics.json").read_text())
+    assert saved["metrics"] == pytest.approx(metrics)
+    assert saved["n_features"] == 62
 
     client = MlflowClient(tracking_uri=tracking_uri)
     experiment = client.get_experiment_by_name(EXPERIMENT_NAME)

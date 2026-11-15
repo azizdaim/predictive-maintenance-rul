@@ -1,0 +1,56 @@
+# "Control room" theme for the turbofan dashboard: dark surfaces, a cyan
+# accent like an aircraft display, and status colors that match the health bands.
+
+[theme]
+base = "dark"
+primaryColor = "#22D3EE"
+backgroundColor = "#0A0F1C"
+secondaryBackgroundColor = "#121A2B"
+codeBackgroundColor = "#121A2B"
+textColor = "#E2E8F0"
+linkColor = "#67E8F9"
+borderColor = "#1F2A40"
+codeTextColor = "#CBD5E1"
+showWidgetBorder = true
+showSidebarBorder = true
+baseRadius = "10px"
+buttonRadius = "10px"
+font = "'Inter':https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "'Space Grotesk':https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+baseFontSize = 15
+baseFontWeight = 400
+headingFontSizes = ["44px", "28px", "20px", "17px", "15px", "13px"]
+headingFontWeights = [700, 600, 600, 600, 500, 500]
+metricValueFontSize = "30px"
+metricValueFontWeight = 600
+linkUnderline = false
+paddingTop = "1.5rem"
+paddingBottom = "3rem"
+
+# Status colors, also used by badges and the fleet table
+greenColor = "#34D399"
+orangeColor = "#FB923C"
+redColor = "#F87171"
+yellowColor = "#FBBF24"
+blueColor = "#38BDF8"
+violetColor = "#A78BFA"
+grayColor = "#94A3B8"
+
+# First color is the prediction line, second is the true RUL line
+chartCategoricalColors = [
+    "#22D3EE",
+    "#94A3B8",
+    "#34D399",
+    "#FB923C",
+    "#F87171",
+    "#A78BFA",
+]
+dataframeBorderColor = "#1F2A40"
+dataframeHeaderBackgroundColor = "#121A2B"
+dataframeHeaderTextColor = "#F8FAFC"
+
+[theme.sidebar]
+backgroundColor = "#070B14"
+secondaryBackgroundColor = "#121A2B"
+borderColor = "#1F2A40"

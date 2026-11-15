@@ -5,13 +5,14 @@ from itertools import pairwise
 from typing import Annotated
 
 import joblib
+import numpy as np
 import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException
 from lightgbm import LGBMRegressor
 from pydantic import BaseModel, Field, model_validator
 
 from src.features.build_features import TREND_LAG, prepare_features
-from src.models.train import MODEL_PATH
+from src.models.train import MODEL_PATH, metrics_path_for
 
 app = FastAPI(title="Turbofan RUL API")
 
@@ -72,6 +73,28 @@ class Prediction(BaseModel):
     warning: str | None = None
 
 
+class CyclePrediction(BaseModel):
+    """Predicted remaining useful life at one cycle."""
+
+    cycle: int
+    predicted_rul: float
+
+
+class HistoryPrediction(BaseModel):
+    """Predicted remaining useful life at every cycle of a history."""
+
+    predictions: list[CyclePrediction]
+
+
+class ModelInfo(BaseModel):
+    """Evaluation results saved with the served model when it was trained."""
+
+    metrics: dict[str, float]
+    n_features: int
+    n_train_engines: int
+    trained_at: str
+
+
 @lru_cache
 def get_model() -> LGBMRegressor:
     """Load the trained model once and reuse it for every request."""
@@ -83,10 +106,38 @@ def get_model() -> LGBMRegressor:
     return joblib.load(MODEL_PATH)
 
 
+def predict_every_cycle(history: EngineHistory, model: LGBMRegressor) -> np.ndarray:
+    """Predict RUL at each cycle, using only that cycle and the ones before it.
+
+    Features look backwards only, so one pass over the full history gives the
+    same value at each cycle as sending the history cut off at that cycle.
+    """
+    raw = pd.DataFrame([reading.model_dump() for reading in history.cycles])
+    raw.insert(0, "engine_id", 1)
+
+    # Same feature code as training, so serving cannot drift from it
+    features = prepare_features(raw, is_train=False)
+
+    # Keep within 0 to the training cap, since raw model output can overshoot
+    return np.clip(model.predict(features[model.feature_name_]), 0.0, RUL_CAP)
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     """Report that the service is running."""
     return {"status": "ok"}
+
+
+@app.get("/model/info")
+def model_info() -> ModelInfo:
+    """Report how the served model scored when it was trained."""
+    path = metrics_path_for(MODEL_PATH)
+    if not path.exists():
+        raise HTTPException(
+            status_code=503,
+            detail="Model metrics not found. Run `python -m src.models.train` first.",
+        )
+    return ModelInfo.model_validate_json(path.read_text())
 
 
 @app.post("/predict")
@@ -95,15 +146,7 @@ def predict(
     model: Annotated[LGBMRegressor, Depends(get_model)],
 ) -> Prediction:
     """Predict RUL at the latest cycle from an engine's sensor history."""
-    raw = pd.DataFrame([reading.model_dump() for reading in history.cycles])
-    raw.insert(0, "engine_id", 1)
-
-    # Same feature code as training, so serving cannot drift from it
-    features = prepare_features(raw, is_train=False)
-    latest = features.iloc[[-1]][model.feature_name_]
-
-    # Keep within 0 to the training cap, since raw model output can overshoot
-    predicted = min(max(float(model.predict(latest)[0]), 0.0), RUL_CAP)
+    predicted = float(predict_every_cycle(history, model)[-1])
 
     warning = None
     if len(history.cycles) <= TREND_LAG:
@@ -117,4 +160,20 @@ def predict(
         last_cycle=history.cycles[-1].cycle,
         cycles_received=len(history.cycles),
         warning=warning,
+    )
+
+
+@app.post("/predict/history")
+def predict_history(
+    history: EngineHistory,
+    model: Annotated[LGBMRegressor, Depends(get_model)],
+) -> HistoryPrediction:
+    """Predict RUL at every cycle of an engine's history in one request."""
+    predicted = predict_every_cycle(history, model)
+
+    return HistoryPrediction(
+        predictions=[
+            CyclePrediction(cycle=reading.cycle, predicted_rul=round(float(rul), 2))
+            for reading, rul in zip(history.cycles, predicted, strict=True)
+        ]
     )
