@@ -148,8 +148,10 @@ Findings:
   controlled experiment.
 - Raw readings, rolling spreads, and operating settings can each be removed
   without loss. FD001 has a single operating condition, so the settings carry no
-  signal. Each group being removable alone does not prove they can all be removed
-  together, because overlapping features can cover for each other.
+  signal. Because overlapping features can cover for each other, all three were
+  also removed together: dropping those 32 features changed RMSE by −0.05 and
+  near-failure RMSE by −0.07, worse in 0 of 3 shuffles. A 30-feature model of
+  rolling averages and trends performs as well as the full 62.
 - Every engine section matters, consistently across all shuffles. High-pressure
   compressor sensors matter most, though that group also has the most sensors.
 

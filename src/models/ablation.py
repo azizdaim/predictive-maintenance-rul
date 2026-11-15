@@ -16,6 +16,7 @@ import pandas as pd
 
 from src.data.loader import PROJECT_ROOT, load_data
 from src.features.build_features import prepare_features
+from src.features.sensors import ENGINE_SECTIONS as SENSOR_SECTIONS
 from src.models.train import (
     BASELINE_PARAMS,
     DEFAULT_TRACKING_URI,
@@ -29,15 +30,8 @@ ABLATION_EXPERIMENT = "turbofan_rul_ablation"
 REPORT_PATH = PROJECT_ROOT / "reports" / "ablation_results.csv"
 FULL_MODEL = "All features"
 
-# Which engine section each active C-MAPSS sensor measures (Saxena et al., 2008)
-ENGINE_SECTIONS: dict[str, list[int]] = {
-    "Fan": [6, 8, 13, 15],
-    "Low-pressure compressor": [2],
-    "High-pressure compressor": [3, 7, 9, 11, 14],
-    "Combustor": [12, 17],
-    "High-pressure turbine": [20],
-    "Low-pressure turbine": [4, 21],
-}
+# Display name -> sensor numbers, from the shared mapping
+ENGINE_SECTIONS: dict[str, list[int]] = dict(SENSOR_SECTIONS.values())
 
 _SENSOR_NUMBER = re.compile(r"^sensor_(\d+)")
 
@@ -160,9 +154,18 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     df = prepare_features(load_data("train_FD001.txt"), is_train=True)
     columns = get_feature_columns(df)
+    by_type = feature_type_groups(columns)
+    # Groups that are each harmless to remove alone may still matter together,
+    # because overlapping features can cover for one another
+    weak = ["Operating settings", "Raw sensor readings", "Rolling spreads"]
     groups = {
-        "Feature type": feature_type_groups(columns),
+        "Feature type": by_type,
         "Engine section": engine_section_groups(columns),
+        "Combined": {
+            "Settings, raw readings, and rolling spreads": [
+                col for name in weak for col in by_type[name]
+            ]
+        },
     }
 
     results = run_ablation(df, groups)
