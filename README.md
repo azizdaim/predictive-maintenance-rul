@@ -44,7 +44,8 @@ how many cycles remain before failure.
 │   ├── features/           # Rolling and trend features
 │   ├── models/             # Training, cross-validation, ablation, MLflow logging
 │   ├── evaluation/         # RMSE and NASA scoring
-│   └── api/                # FastAPI prediction service
+│   ├── api/                # FastAPI prediction service
+│   └── dashboard/          # Streamlit dashboard, charts, and 3D engine component
 ├── tests/                  # Unit tests (pytest)
 ├── pyproject.toml          # Ruff and pytest configuration
 └── requirements.txt
@@ -73,7 +74,15 @@ mlflow ui --backend-store-uri ./mlruns
 
 # Serve predictions from the trained model, then open http://127.0.0.1:8000/docs
 uvicorn src.api.main:app --reload
+
+# In a second terminal, start the dashboard (it gets predictions from the API)
+streamlit run src/dashboard/app.py
 ```
+
+The dashboard has four pages: a landing page with an interactive 3D engine, a
+fleet overview of all 100 test engines, an engine detail page, and a live
+simulation that replays an engine cycle by cycle through the API. Add
+`?autoplay=1` to the simulation page's address to start the replay on arrival.
 
 ## API
 

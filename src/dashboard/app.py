@@ -34,6 +34,13 @@ page = st.navigation(
             help="One engine's predicted and true remaining life across its recorded "
             "history. Move the cycle slider to go back in time.",
         ),
+        st.Page(
+            "app_pages/simulate.py",
+            title="Live simulation",
+            icon=":material/play_circle:",
+            help="Replay an engine cycle by cycle through the prediction API and "
+            "watch the alerts fire as it wears out.",
+        ),
     ],
     position="top",
 )

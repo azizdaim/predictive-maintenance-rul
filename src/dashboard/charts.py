@@ -90,7 +90,9 @@ def rul_gauge(predicted_rul: float) -> dict:
     }
 
 
-def rul_history_chart(engine: pd.DataFrame, cycle: int) -> dict:
+def rul_history_chart(
+    engine: pd.DataFrame, cycle: int, last_cycle: int | None = None
+) -> dict:
     """Build the predicted vs true RUL line chart for one engine.
 
     Shaded bands mark the health thresholds, a vertical line marks the selected
@@ -99,6 +101,8 @@ def rul_history_chart(engine: pd.DataFrame, cycle: int) -> dict:
     Args:
         engine: One engine's rows with 'cycle', 'predicted_rul', and 'true_rul'.
         cycle: The cycle currently selected on the page.
+        last_cycle: Fixed end of the x-axis, so a growing history fills it from
+            the left. Defaults to the last cycle in the frame.
 
     Returns:
         dict: ECharts option reading the frame through dataset.source.
@@ -121,7 +125,7 @@ def rul_history_chart(engine: pd.DataFrame, cycle: int) -> dict:
             "nameLocation": "middle",
             "nameGap": 28,
             "min": int(source["cycle"].min()),
-            "max": int(source["cycle"].max()),
+            "max": last_cycle or int(source["cycle"].max()),
             "splitLine": {"show": False},
         },
         "yAxis": {
