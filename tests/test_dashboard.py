@@ -141,7 +141,7 @@ def test_engine_page_shows_engine_and_updates() -> None:
     at.switch_page("app_pages/engine.py").run()
 
     assert not at.exception
-    assert at.metric[1].value == "8 cycles"  # engine 31's true RUL at its last cycle
+    assert at.metric[0].value == "8 cycles"  # engine 31's true RUL at its last cycle
 
     at.slider[0].set_value(10).run()
     assert not at.exception
