@@ -11,3 +11,4 @@ Engine section,Without high-pressure compressor,20,14.143,9.384,4.356,2.044,2.46
 Engine section,Without combustor,8,12.483,7.657,3.212,0.383,0.733,3,3
 Engine section,Without high-pressure turbine,4,12.188,6.995,3.044,0.089,0.072,3,3
 Engine section,Without low-pressure turbine,8,12.415,7.336,3.193,0.316,0.412,3,3
+Combined,"Without settings, raw readings, and rolling spreads",32,12.048,6.851,2.957,-0.052,-0.072,0,3

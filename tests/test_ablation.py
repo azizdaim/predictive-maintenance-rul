@@ -6,14 +6,14 @@ import pytest
 import src.models.ablation as ablation
 from src.data.loader import load_data
 from src.features.build_features import prepare_features
-from src.models.train import get_feature_columns
+from src.models.train import get_candidate_columns
 
 
 @pytest.fixture(scope="module")
 def columns() -> list[str]:
     """Feature columns of the real training pipeline."""
     df = prepare_features(load_data("train_FD001.txt"), is_train=True)
-    return get_feature_columns(df)
+    return get_candidate_columns(df)
 
 
 def test_feature_type_groups_cover_every_feature_once(columns: list[str]) -> None:
@@ -54,8 +54,11 @@ def test_run_ablation_compares_each_variant_to_the_full_model(
     )
     seen: list[list[str]] = []
 
-    def fake_cv(reduced: pd.DataFrame, seed: int) -> dict[str, float]:
-        features = get_feature_columns(reduced)
+    def fake_cv(
+        reduced: pd.DataFrame, seed: int, feature_cols: list[str]
+    ) -> dict[str, float]:
+        features = feature_cols
+        assert features == get_candidate_columns(reduced)
         seen.append(features)
         # Fewer features means a higher error, plus a little noise per seed
         rmse = 10.0 + (3 - len(features)) * 2.0 + seed * 0.1

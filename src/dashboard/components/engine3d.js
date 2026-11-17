@@ -2,14 +2,14 @@ const THREE_URL = "__THREE_URL__";
 let threeModule = null;
 const instances = new WeakMap();
 
-// What each section does, and which C-MAPSS sensors measure it (Saxena et al., 2008)
+// What each section does. Sensor numbers come from Python (src/features/sensors.py)
 const PARTS = {
-  fan: ["Fan", "Pulls in air. Sensors 8, 13, 15: fan speed and bypass ratio."],
-  lpc: ["Low-pressure compressor", "First squeeze of the core air. Sensor 2."],
-  hpc: ["High-pressure compressor", "Raises pressure for combustion. Sensors 3, 7, 9, 11, 14."],
-  combustor: ["Combustor", "Burns fuel with the compressed air. Sensors 12, 17."],
-  hpt: ["High-pressure turbine", "Drives the compressor, hottest part. Sensor 20."],
-  lpt: ["Low-pressure turbine", "Drives the fan. Sensors 4, 21."],
+  fan: ["Fan", "Pulls in air and drives most of the thrust."],
+  lpc: ["Low-pressure compressor", "First squeeze of the core air."],
+  hpc: ["High-pressure compressor", "Raises pressure for combustion."],
+  combustor: ["Combustor", "Burns fuel with the compressed air."],
+  hpt: ["High-pressure turbine", "Drives the compressor; the hottest part."],
+  lpt: ["Low-pressure turbine", "Drives the fan."],
   nacelle: ["Nacelle", "Outer casing around the whole engine."],
 };
 
@@ -202,7 +202,11 @@ function buildEngine(THREE, root, data) {
     setHighlight(part);
     if (part) {
       const [title, text] = PARTS[part];
-      tooltip.innerHTML = "<b>" + title + "</b>" + text;
+      const sensors = state.sensors[part];
+      const sensorText = sensors && sensors.length
+        ? "<br>Sensor" + (sensors.length > 1 ? "s " : " ") + sensors.join(", ")
+        : "";
+      tooltip.innerHTML = "<b>" + title + "</b>" + text + sensorText;
       tooltip.hidden = false;
       tooltip.style.left = Math.min(e.clientX - rect.left + 14, rect.width - 250) + "px";
       tooltip.style.top = Math.max(e.clientY - rect.top - 10, 8) + "px";
@@ -211,11 +215,12 @@ function buildEngine(THREE, root, data) {
     }
   };
 
-  const state = { fanSpeed: 0.6, status: new THREE.Color(0x22d3ee), glow: 0.5 };
+  const state = { fanSpeed: 0.6, status: new THREE.Color(0x22d3ee), glow: 0.5, sensors: {} };
   const chip = root.querySelector(".chip");
 
   function update(next) {
     root.style.height = (next.height || 440) + "px";
+    state.sensors = next.sensors || {};
     state.fanSpeed = Math.max(0, Math.min(1, next.fan_speed ?? 0.6));
     state.status.set(next.status_color || "#22D3EE");
     state.glow = Math.max(0, Math.min(1, next.glow ?? 0.5));

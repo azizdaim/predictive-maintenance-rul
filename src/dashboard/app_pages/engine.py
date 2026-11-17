@@ -1,11 +1,17 @@
-"""Engine detail: predicted vs true remaining life across one engine's history."""
+"""Engine detail: one engine's health in 3D, a life gauge, and its full history."""
 
-import altair as alt
 import httpx
-import pandas as pd
 import streamlit as st
 
-from src.dashboard.client import REPLACE_SOON_BELOW, WATCH_BELOW, health_status
+from src.dashboard.charts import rul_gauge, rul_history_chart
+from src.dashboard.client import (
+    REPLACE_SOON_BELOW,
+    RUL_CAP,
+    STATUS_HEX,
+    WATCH_BELOW,
+    health_status,
+)
+from src.dashboard.components.engine3d import engine_3d
 from src.dashboard.data import (
     get_predictions,
     get_test_engines,
@@ -15,7 +21,10 @@ from src.dashboard.data import (
 from src.features.build_features import TREND_LAG
 
 st.title("Engine detail", icon=":material/monitoring:")
-st.caption("Predicted vs true remaining life across one engine's recorded history.")
+st.caption(
+    "Pick an engine and move back through its history to see how its health "
+    "and the model's prediction changed, cycle by cycle."
+)
 
 engines = get_test_engines()
 
@@ -57,16 +66,35 @@ with st.container(horizontal=True, vertical_alignment="center"):
     st.subheader(f"Engine {engine_id} at cycle {cycle}")
     st.badge(label, color=color)
 
-with st.container(horizontal=True):
-    st.metric("Predicted RUL", f"{predicted:.0f} cycles", border=True)
-    st.metric("True RUL", f"{actual:.0f} cycles", border=True)
-    st.metric(
-        "Prediction error",
-        f"{predicted - actual:+.0f} cycles",
-        border=True,
-        help="Positive means the model predicted more life than the engine had, "
-        "which is the riskier mistake.",
+# Closer to failure: the core glows harder and the rotors slow down
+wear = 1 - min(predicted, RUL_CAP) / RUL_CAP
+view, readout = st.columns([3, 2])
+with view:
+    engine_3d(
+        status_color=STATUS_HEX[label],
+        label=f"Engine {engine_id} · {label}",
+        fan_speed=0.8 - 0.6 * wear,
+        glow=0.25 + 0.75 * wear,
+        height=420,
+        key="engine_detail_3d",
     )
+with readout:
+    with st.container(border=True):
+        st.markdown("**Predicted remaining life**")
+        st.echarts_chart(
+            rul_gauge(predicted),
+            height=230,
+            alt=f"Gauge showing {predicted:.0f} predicted cycles left",
+        )
+    with st.container(horizontal=True):
+        st.metric("True RUL", f"{actual:.0f} cycles", border=True)
+        st.metric(
+            "Prediction error",
+            f"{predicted - actual:+.0f} cycles",
+            border=True,
+            help="Positive means the model predicted more life than the engine "
+            "had, which is the riskier mistake.",
+        )
 
 if cycle <= TREND_LAG:
     st.warning(
@@ -76,45 +104,16 @@ if cycle <= TREND_LAG:
         icon=":material/info:",
     )
 
-chart_data = engine.melt(
-    id_vars="cycle",
-    value_vars=["predicted_rul", "true_rul"],
-    var_name="series",
-    value_name="rul",
-)
-chart_data["series"] = chart_data["series"].map(
-    {"predicted_rul": "Predicted", "true_rul": "True"}
-)
-
-lines = (
-    alt.Chart(chart_data)
-    .mark_line()
-    .encode(
-        x=alt.X("cycle:Q", title="Cycle"),
-        y=alt.Y("rul:Q", title="Remaining useful life (cycles)"),
-        color=alt.Color("series:N", title=None),
-        strokeDash=alt.StrokeDash("series:N", legend=None),
-        tooltip=[
-            alt.Tooltip("cycle:Q", title="Cycle"),
-            alt.Tooltip("series:N", title="Series"),
-            alt.Tooltip("rul:Q", title="RUL", format=".1f"),
-        ],
-    )
-)
-selected = (
-    alt.Chart(pd.DataFrame({"cycle": [cycle]}))
-    .mark_rule(strokeDash=[4, 4], color="gray")
-    .encode(x="cycle:Q")
-)
-
 with st.container(border=True):
     st.markdown("**Predicted vs true remaining life**")
-    st.altair_chart(
-        lines + selected,
+    st.echarts_chart(
+        rul_history_chart(engine, cycle),
+        height=360,
         alt=f"Predicted and true RUL across engine {engine_id}'s recorded life",
     )
     st.caption(
-        f"True RUL comes from NASA's answer file and is capped at 125, like the "
-        f"model's training target. Health bands: replace soon below "
-        f"{REPLACE_SOON_BELOW} cycles, watch below {WATCH_BELOW}."
+        f"True RUL comes from NASA's answer file and is capped at {RUL_CAP}, like "
+        f"the model's training target. Shaded bands: replace soon below "
+        f"{REPLACE_SOON_BELOW} cycles, watch below {WATCH_BELOW}. Scroll or drag "
+        "the slider to zoom."
     )

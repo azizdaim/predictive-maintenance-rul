@@ -32,7 +32,7 @@ SAVED_METRICS = {
         "test_rmse": 13.22,
         "test_rmse_raw": 14.49,
     },
-    "n_features": 62,
+    "n_features": 30,
     "n_train_engines": 100,
     "trained_at": "2026-11-14T00:00:00+00:00",
 }
@@ -141,7 +141,7 @@ def test_engine_page_shows_engine_and_updates() -> None:
     at.switch_page("app_pages/engine.py").run()
 
     assert not at.exception
-    assert at.metric[1].value == "8 cycles"  # engine 31's true RUL at its last cycle
+    assert at.metric[0].value == "8 cycles"  # engine 31's true RUL at its last cycle
 
     at.slider[0].set_value(10).run()
     assert not at.exception
@@ -150,6 +150,30 @@ def test_engine_page_shows_engine_and_updates() -> None:
     at.selectbox[0].set_value(1).run()
     assert not at.exception
     assert at.subheader[0].value.startswith("Engine 1 ")
+
+
+@pytest.mark.usefixtures("api_through_httpx")
+def test_simulation_replays_engine_and_raises_alerts() -> None:
+    """Verify play advances the replay, alerts fire, and it stops at the end."""
+    at = AppTest.from_file(APP_PATH, default_timeout=60).run()
+    at.switch_page("app_pages/simulate.py").run()
+    assert at.subheader[0].value == "Engine 31 · cycle 0 of 196"
+
+    at.segmented_control(key="sim_speed").set_value("Very fast")
+    at.button(key="sim_play").click().run()
+    assert not at.exception
+    assert at.subheader[0].value == "Engine 31 · cycle 10 of 196"
+
+    # The timer does not run in tests, so each rerun stands in for one tick
+    for _ in range(25):
+        at.run()
+    assert at.subheader[0].value == "Engine 31 · cycle 196 of 196"
+    assert at.button(key="sim_play").label == "Play"
+    alerts = [m.value for m in at.markdown if "entered" in m.value]
+    assert [a.split(": entered ")[1] for a in alerts] == ["watch", "replace soon"]
+
+    at.button(key="sim_reset").click().run()
+    assert at.subheader[0].value == "Engine 31 · cycle 0 of 196"
 
 
 def test_dashboard_explains_when_api_is_down(monkeypatch: pytest.MonkeyPatch) -> None:

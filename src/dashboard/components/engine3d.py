@@ -9,6 +9,8 @@ from pathlib import Path
 
 import streamlit as st
 
+from src.features.sensors import ENGINE_SECTIONS
+
 # Pinned three.js build, loaded by the browser from a public CDN
 THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
 
@@ -57,6 +59,7 @@ def engine_3d(
             "fan_speed": fan_speed,
             "glow": glow,
             "height": height,
+            "sensors": {key: sensors for key, (_, sensors) in ENGINE_SECTIONS.items()},
         },
         key=key,
         height=height,
