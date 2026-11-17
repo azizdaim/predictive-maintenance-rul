@@ -78,8 +78,9 @@ with findings:
         "**Half the features do the same job.** Raw readings, rolling spreads, and "
         "operating settings were removed together, and accuracy did not drop. The "
         "served model uses the remaining 30 features out of 62.\n\n"
-        "**Warnings come early enough to act on.** In the live replay, engine 31 is "
-        "flagged for watching with 44 cycles left and for replacement with 24."
+        "**Warnings come early enough to act on.** In the live replay at the default "
+        "speed, engine 31 is flagged for watching with 59 cycles left and for "
+        "replacement with 24."
     )
 with chart:
     st.markdown("**Extra error when one engine section's sensors are removed**")
