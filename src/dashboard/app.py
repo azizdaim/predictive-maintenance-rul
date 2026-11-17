@@ -1,10 +1,27 @@
 """Streamlit dashboard entry point: page setup and navigation."""
 
+import sys
+from pathlib import Path
+
 import streamlit as st
+
+# Streamlit puts this file's folder on the import path, not the project root.
+# Adding the root makes `src` importable on any host, without PYTHONPATH.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.dashboard.embedded_api import (  # noqa: E402
+    embedded_api_enabled,
+    start_embedded_api,
+)
 
 st.set_page_config(
     page_title="Turbofan engine health", page_icon=":material/flight:", layout="wide"
 )
+
+if embedded_api_enabled():
+    start_embedded_api()
 
 # Shared between pages: the fleet table sets it, the engine page reads it
 if "engine_id" not in st.session_state:

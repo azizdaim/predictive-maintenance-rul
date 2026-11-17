@@ -1,0 +1,13 @@
+# Keep the build context small: Docker only needs the code and config it copies
+.git
+.claude
+.agents
+venv
+__pycache__
+.pytest_cache
+.ruff_cache
+mlruns
+models
+data
+notebooks
+tests

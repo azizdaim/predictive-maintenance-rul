@@ -1,0 +1,18 @@
+{
+  "metrics": {
+    "cv_rmse_mean": 11.903175771712732,
+    "cv_rmse_std": 0.5618147352516356,
+    "cv_nasa_per_engine_mean": 2.8585368344747097,
+    "cv_nasa_per_engine_std": 0.4220934226572671,
+    "cv_near_failure_rmse_mean": 6.80621975650021,
+    "cv_near_failure_rmse_std": 0.4172919015244749,
+    "test_rmse": 13.06644771671286,
+    "test_nasa_score": 284.9696817970304,
+    "test_nasa_per_engine": 2.8496968179703037,
+    "test_rmse_raw": 14.338358783781846,
+    "test_nasa_score_raw": 317.72181580218967
+  },
+  "n_features": 30,
+  "n_train_engines": 100,
+  "trained_at": "2026-11-15T19:05:17+00:00"
+}

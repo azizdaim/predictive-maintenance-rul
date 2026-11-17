@@ -1,0 +1,3 @@
+# Streamlit Community Cloud installs the requirements file next to the app's
+# entry point, so this points it at the pinned app requirements
+-r ../../requirements-app.txt

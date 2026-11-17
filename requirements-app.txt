@@ -1,0 +1,18 @@
+# Only what the running app needs: the prediction API and the dashboard.
+# Pinned to exact versions so every Docker build installs the same packages.
+# Development tools (notebooks, MLflow, pytest) live in requirements.txt.
+numpy==1.26.4
+pandas==2.3.3
+scikit-learn==1.9.1
+lightgbm==4.7.0
+joblib==1.6.0
+fastapi==0.162.2
+uvicorn==0.54.0
+pydantic==2.14.3
+httpx==0.28.1
+streamlit==1.67.0
+altair==6.3.0
+# Streamlit's own dependencies, pinned to the tested versions: the newest
+# pyarrow needs NumPy 2 and breaks the charts with NumPy 1.26
+pyarrow==19.0.1
+protobuf==6.33.6

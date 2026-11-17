@@ -1,5 +1,10 @@
-# Data — never commit raw or processed datasets (leading slash = root only)
-/data/
+# Data: only the two small public NASA test files the hosted dashboard reads are
+# committed; download the rest with the README's Quick Start commands
+/data/*
+!/data/raw/
+/data/raw/*
+!/data/raw/test_FD001.txt
+!/data/raw/RUL_FD001.txt
 
 # Python
 __pycache__/
@@ -38,7 +43,10 @@ Thumbs.db
 # Docker
 *.log
 
-# Model artifacts (track via MLflow instead)
+# Model artifacts are tracked in MLflow, except the served model and its scores,
+# which the hosted dashboard loads. Retrain and commit both together.
 models/*.pkl
 models/*.joblib
 models/*_metrics.json
+!models/rul_model.joblib
+!models/rul_model_metrics.json

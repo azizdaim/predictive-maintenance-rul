@@ -12,7 +12,7 @@ from lightgbm import LGBMRegressor
 from pydantic import BaseModel, Field, model_validator
 
 from src.features.build_features import TREND_LAG, prepare_features
-from src.models.train import MODEL_PATH, metrics_path_for
+from src.models.paths import MODEL_PATH, metrics_path_for
 
 app = FastAPI(title="Turbofan RUL API")
 
