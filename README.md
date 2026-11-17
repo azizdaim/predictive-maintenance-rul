@@ -3,6 +3,9 @@
 Predict the **Remaining Useful Life (RUL)** of turbofan engines using NASA's
 [C-MAPSS dataset](https://www.nasa.gov/intelligent-systems-division/discovery-and-systems-health/pcoe/pcoe-data-set-repository/).
 
+**Live dashboard:** [azizdaim-turbofan.streamlit.app](https://azizdaim-turbofan.streamlit.app)
+(after a quiet spell it sleeps, and the first visit needs a wake-up click)
+
 ## Overview
 
 This portfolio project is building an end-to-end ML system, from raw sensor
