@@ -25,11 +25,11 @@ function buildEngine(THREE, root, data) {
   camera.position.set(4.9, 2.3, 6.9);
   camera.lookAt(0, -0.1, 0);
 
-  scene.add(new THREE.HemisphereLight(0xcfe3ff, 0x0a0f1c, 1.1));
+  scene.add(new THREE.HemisphereLight(0xcfe3ff, 0x000000, 1.1));
   const key = new THREE.DirectionalLight(0xffffff, 2.2);
   key.position.set(5, 7, 6);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0x22d3ee, 1.6);
+  const rim = new THREE.DirectionalLight(0x3fd0ff, 1.6);
   rim.position.set(-7, 2, -5);
   scene.add(rim);
   const coreLight = new THREE.PointLight(0xffffff, 6, 4, 2);
@@ -154,7 +154,7 @@ function buildEngine(THREE, root, data) {
   // Status halo around the intake lip
   const halo = new THREE.Mesh(
     new THREE.TorusGeometry(1.36, 0.018, 12, 160),
-    new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.9 }),
+    new THREE.MeshBasicMaterial({ color: 0x3fd0ff, transparent: true, opacity: 0.9 }),
   );
   halo.rotation.x = Math.PI / 2;
   halo.position.y = 1.96;
@@ -176,7 +176,7 @@ function buildEngine(THREE, root, data) {
     }
     hovered = part;
     for (const m of materials[hovered] || []) {
-      m.emissive.set(0x22d3ee);
+      m.emissive.set(0x3fd0ff);
       m.emissiveIntensity = Math.max(m.userData.baseIntensity, 0.45);
     }
   }
@@ -215,14 +215,14 @@ function buildEngine(THREE, root, data) {
     }
   };
 
-  const state = { fanSpeed: 0.6, status: new THREE.Color(0x22d3ee), glow: 0.5, sensors: {} };
+  const state = { fanSpeed: 0.6, status: new THREE.Color(0x3fd0ff), glow: 0.5, sensors: {} };
   const chip = root.querySelector(".chip");
 
   function update(next) {
     root.style.height = (next.height || 440) + "px";
     state.sensors = next.sensors || {};
     state.fanSpeed = Math.max(0, Math.min(1, next.fan_speed ?? 0.6));
-    state.status.set(next.status_color || "#22D3EE");
+    state.status.set(next.status_color || "#3FD0FF");
     state.glow = Math.max(0, Math.min(1, next.glow ?? 0.5));
     halo.material.color.copy(state.status);
     coreLight.color.copy(state.status);
@@ -232,8 +232,8 @@ function buildEngine(THREE, root, data) {
     }
     chip.hidden = !next.label;
     chip.querySelector(".chip-text").textContent = next.label || "";
-    chip.querySelector(".dot").style.color = next.status_color || "#22D3EE";
-    chip.querySelector(".dot").style.background = next.status_color || "#22D3EE";
+    chip.querySelector(".dot").style.color = next.status_color || "#3FD0FF";
+    chip.querySelector(".dot").style.background = next.status_color || "#3FD0FF";
   }
 
   function resize() {

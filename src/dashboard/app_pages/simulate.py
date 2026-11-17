@@ -13,6 +13,7 @@ from src.dashboard.client import (
 )
 from src.dashboard.components.engine3d import engine_3d
 from src.dashboard.data import get_test_engines, get_true_rul, show_api_error
+from src.dashboard.palette import CYAN
 
 # Seconds between steps, and how many cycles each step reveals at each speed
 TICK_SECONDS = 0.4
@@ -126,7 +127,7 @@ def live_view() -> None:
         label = health_status(predicted)[0]
 
     with st.container(horizontal=True, vertical_alignment="center"):
-        st.subheader(f"Engine {engine_id} · cycle {cycle} of {last_cycle}")
+        st.subheader(f"Engine {engine_id}, cycle {cycle} of {last_cycle}")
         if label:
             st.badge(label, color=STATUS_COLORS[label])
     st.progress(cycle / last_cycle)
@@ -134,8 +135,7 @@ def live_view() -> None:
     view, readout = st.columns([3, 2])
     with view:
         engine_3d(
-            status_color=STATUS_HEX[label] if label else "#22D3EE",
-            label=f"Engine {engine_id} · {label}" if label else "Press play to start",
+            status_color=STATUS_HEX[label] if label else CYAN,
             fan_speed=0.8 - 0.6 * (1 - predicted / 125) if predicted else 0.2,
             glow=0.25 + 0.75 * (1 - predicted / 125) if predicted else 0.2,
             height=400,

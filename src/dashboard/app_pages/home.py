@@ -13,8 +13,7 @@ from src.dashboard.data import get_fleet, get_model_info
 hero_text, hero_engine = st.columns([1, 1.15], gap="large", vertical_alignment="center")
 
 with hero_text:
-    st.badge("NASA C-MAPSS turbofan data", icon=":material/flight:", color="blue")
-    st.title("Know how long an engine has left, before it fails")
+    st.title("Know how long an engine has left, before it fails", anchor=False)
     st.markdown(
         "A machine learning system that reads an engine's sensor history and "
         "predicts its **remaining useful life**, in flight cycles. It runs end to "
@@ -33,7 +32,6 @@ with hero_text:
 
 with hero_engine:
     engine_3d(
-        label="Interactive cutaway · hover a section",
         fan_speed=0.7,
         glow=0.55,
         height=460,
@@ -41,36 +39,13 @@ with hero_engine:
     )
 
 st.space("medium")
-st.subheader("How it works")
-
-steps = [
-    (
-        ":material/sensors:",
-        "1 · Sensor data",
-        "21 sensors and 3 settings per flight cycle, from NASA's engine simulator.",
-    ),
-    (
-        ":material/insights:",
-        "2 · Features",
-        "Rolling averages smooth noise. 30-cycle trends capture slow wear.",
-    ),
-    (
-        ":material/model_training:",
-        "3 · Model",
-        "LightGBM, scored with cross-validation grouped by engine to avoid leakage.",
-    ),
-    (
-        ":material/api:",
-        "4 · Serving",
-        "A tested FastAPI service answers every prediction on this dashboard.",
-    ),
-]
-for column, (icon, title, text) in zip(
-    st.columns(len(steps), border=True), steps, strict=True
-):
-    with column:
-        st.markdown(f"#### {icon} {title}")
-        st.caption(text)
+with st.container(horizontal=True, vertical_alignment="center"):
+    st.markdown(
+        "From raw sensor readings to this page in five stages, drawn as the air's "
+        "path through an engine."
+    )
+    if st.button("See how it works", icon=":material/info:"):
+        st.switch_page("app_pages/about.py")
 
 results = st.container()
 

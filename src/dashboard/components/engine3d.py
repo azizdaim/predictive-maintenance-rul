@@ -9,6 +9,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from src.dashboard.palette import CYAN
 from src.features.sensors import ENGINE_SECTIONS
 
 # Pinned three.js build, loaded by the browser from a public CDN
@@ -16,7 +17,6 @@ THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
 
 _HTML = """
 <div class="engine-root">
-  <div class="hint">Drag to rotate · hover a section</div>
   <div class="tooltip" hidden></div>
   <div class="chip"><span class="dot"></span><span class="chip-text"></span></div>
   <div class="fallback" hidden>3D view unavailable: three.js could not be loaded.</div>
@@ -35,7 +35,7 @@ _ENGINE_3D = st.components.v2.component(
 
 def engine_3d(
     *,
-    status_color: str = "#22D3EE",
+    status_color: str = CYAN,
     label: str | None = None,
     fan_speed: float = 0.6,
     glow: float = 0.5,

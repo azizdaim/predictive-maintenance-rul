@@ -2,7 +2,12 @@
 
 import pandas as pd
 
-from src.dashboard.charts import fleet_map, rul_gauge, rul_history_chart
+from src.dashboard.charts import (
+    fleet_map,
+    rul_gauge,
+    rul_history_chart,
+    section_importance_chart,
+)
 from src.dashboard.client import RUL_CAP, STATUS_HEX
 
 
@@ -66,3 +71,19 @@ def test_fleet_map_legend_colors_match_health_bands() -> None:
         STATUS_HEX["Watch"],
         STATUS_HEX["Healthy"],
     ]
+
+
+def test_section_chart_sorts_engine_sections_by_importance() -> None:
+    """Verify only engine sections are charted, the most important last."""
+    ablation = pd.DataFrame(
+        {
+            "study": ["Baseline", "Engine section", "Engine section", "Feature type"],
+            "variant": ["All", "Without fan", "Without combustor", "Without x"],
+            "rmse_change": [0.0, 0.634, 0.381, 6.6],
+        }
+    )
+
+    source = section_importance_chart(ablation)["dataset"]["source"]
+
+    assert source["section"].tolist() == ["Combustor", "Fan"]
+    assert source["rmse_change"].tolist() == [0.38, 0.63]

@@ -11,6 +11,10 @@ from src.dashboard.client import (
     load_test_engines,
     true_rul_by_cycle,
 )
+from src.data.loader import PROJECT_ROOT
+
+# Written by python -m src.models.ablation and committed with the code
+ABLATION_REPORT = PROJECT_ROOT / "reports" / "ablation_results.csv"
 
 
 @st.cache_data(ttl="10m", show_spinner=False)
@@ -54,3 +58,9 @@ def show_api_error() -> None:
         icon=":material/cloud_off:",
     )
     st.stop()
+
+
+@st.cache_data
+def get_ablation_results() -> pd.DataFrame:
+    """Load the saved ablation study results."""
+    return pd.read_csv(ABLATION_REPORT)

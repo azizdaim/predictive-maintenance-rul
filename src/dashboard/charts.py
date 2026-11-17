@@ -8,10 +8,10 @@ st.echarts_chart, which animates between values when the data changes.
 import pandas as pd
 
 from src.dashboard.client import REPLACE_SOON_BELOW, RUL_CAP, STATUS_HEX, WATCH_BELOW
+from src.dashboard.palette import BEZEL, BLACK, MAGENTA, MUTED, WHITE
 
-# Muted text and grid colors that match the dark theme in .streamlit/config.toml
-_MUTED = "#94A3B8"
-_GRID = "#1F2A40"
+_MUTED = MUTED
+_GRID = BEZEL
 
 # Health bands from most to least urgent, matching the order of their RUL ranges
 SEVERITY_ORDER = ("Replace soon", "Watch", "Healthy")
@@ -64,17 +64,17 @@ def rul_gauge(predicted_rul: float) -> dict:
                 "anchor": {
                     "show": True,
                     "size": 12,
-                    "itemStyle": {"color": "#E2E8F0"},
+                    "itemStyle": {"color": WHITE},
                 },
                 "axisTick": {
                     "distance": -14,
                     "length": 5,
-                    "lineStyle": {"color": "#0A0F1C"},
+                    "lineStyle": {"color": BLACK},
                 },
                 "splitLine": {
                     "distance": -14,
                     "length": 14,
-                    "lineStyle": {"color": "#0A0F1C", "width": 2},
+                    "lineStyle": {"color": BLACK, "width": 2},
                 },
                 "splitNumber": 5,
                 "axisLabel": {"distance": 20, "color": _MUTED, "fontSize": 11},
@@ -154,8 +154,8 @@ def rul_history_chart(
                 "markLine": {
                     "silent": True,
                     "symbol": "none",
-                    "lineStyle": {"color": "#E2E8F0", "type": "dashed"},
-                    "label": {"formatter": f"Cycle {cycle}", "color": "#E2E8F0"},
+                    "lineStyle": {"color": WHITE, "type": "dashed"},
+                    "label": {"formatter": f"Cycle {cycle}", "color": WHITE},
                     "data": [{"xAxis": cycle}],
                 },
             },
@@ -232,16 +232,60 @@ def fleet_map(fleet: pd.DataFrame, by_urgency: bool = False, columns: int = 10) 
                 "label": {
                     "show": True,
                     "formatter": "{@engine_id}",
-                    "color": "#0A0F1C",
+                    "color": BLACK,
                     "fontWeight": 600,
                 },
                 "itemStyle": {
-                    "borderColor": "#0A0F1C",
+                    "borderColor": BLACK,
                     "borderWidth": 3,
                     "borderRadius": 6,
                 },
-                "emphasis": {"itemStyle": {"borderColor": "#E2E8F0"}},
-                "select": {"itemStyle": {"borderColor": "#E2E8F0"}},
+                "emphasis": {"itemStyle": {"borderColor": WHITE}},
+                "select": {"itemStyle": {"borderColor": WHITE}},
+            }
+        ],
+    }
+
+
+def section_importance_chart(ablation: pd.DataFrame) -> dict:
+    """Build a bar chart of how much worse the model gets without each section.
+
+    Args:
+        ablation: Ablation results with 'study', 'variant', and 'rmse_change'.
+
+    Returns:
+        dict: ECharts option with one horizontal bar per engine section, the
+            most important at the top.
+    """
+    sections = ablation[ablation["study"] == "Engine section"].copy()
+    sections["section"] = (
+        sections["variant"].str.removeprefix("Without ").str.capitalize()
+    )
+    sections["rmse_change"] = sections["rmse_change"].round(2)
+    sections = sections.sort_values("rmse_change")[["section", "rmse_change"]]
+    return {
+        "dataset": {"source": sections},
+        "grid": {"left": 8, "right": 48, "top": 8, "bottom": 8, "containLabel": True},
+        "tooltip": {"trigger": "axis", "valueFormatter": "+%.2f cycles"},
+        "xAxis": {"type": "value", "show": False},
+        "yAxis": {
+            "type": "category",
+            "axisTick": {"show": False},
+            "axisLine": {"show": False},
+            "axisLabel": {"color": WHITE},
+        },
+        "series": [
+            {
+                "type": "bar",
+                "encode": {"x": "rmse_change", "y": "section"},
+                "itemStyle": {"color": MAGENTA},
+                "barWidth": "55%",
+                "label": {
+                    "show": True,
+                    "position": "right",
+                    "formatter": "+{@rmse_change}",
+                    "color": MUTED,
+                },
             }
         ],
     }
