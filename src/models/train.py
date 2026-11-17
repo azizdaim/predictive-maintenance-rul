@@ -16,6 +16,7 @@ from sklearn.model_selection import KFold
 from src.data.loader import DATASET_PATH, PROJECT_ROOT, load_data
 from src.evaluation.metrics import compute_rmse, evaluate_predictions
 from src.features.build_features import TREND_LAG, prepare_features
+from src.models.paths import MODEL_PATH, metrics_path_for
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +25,6 @@ METADATA_COLS = ["engine_id", "cycle", "RUL"]
 
 EXPERIMENT_NAME = "turbofan_rul_fd001"
 DEFAULT_TRACKING_URI = (PROJECT_ROOT / "mlruns").as_uri()
-
-# Fixed location of the latest final model, loaded by the API
-MODEL_PATH = PROJECT_ROOT / "models" / "rul_model.joblib"
-
-
-def metrics_path_for(model_path: Path) -> Path:
-    """Return where a model's evaluation summary is saved, next to the model."""
-    return model_path.with_name(f"{model_path.stem}_metrics.json")
 
 # With only 20 validation engines, a single draw of cut-off cycles is very noisy
 VAL_NUM_DRAWS = 50

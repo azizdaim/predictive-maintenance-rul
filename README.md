@@ -7,8 +7,8 @@ Predict the **Remaining Useful Life (RUL)** of turbofan engines using NASA's
 
 This portfolio project is building an end-to-end ML system, from raw sensor
 data to a served model with monitoring and a dashboard. The data pipeline,
-model, evaluation, experiment tracking, and a prediction API are complete. The
-dashboard, monitoring, and deployment are in progress, as shown below.
+model, evaluation, experiment tracking, prediction API, dashboard, and Docker
+image are complete. Drift monitoring and CI are next, as shown below.
 
 | Stage | Status |
 |-------|--------|
@@ -18,10 +18,10 @@ dashboard, monitoring, and deployment are in progress, as shown below.
 | Model (LightGBM) with engine-grouped cross-validation | ✅ Completed |
 | Experiment tracking (MLflow) | ✅ Completed |
 | Model serving (FastAPI) | ✅ Completed |
-| Dashboard (Streamlit) | 🔄 In progress |
+| Dashboard (Streamlit) | ✅ Completed |
 | Drift monitoring (Evidently) | ⬜ Not started |
 | CI/CD (GitHub Actions) | ⬜ Not started |
-| Containerization (Docker) | ⬜ Not started |
+| Containerization (Docker) | ✅ Completed |
 
 ## Dataset
 
@@ -47,8 +47,12 @@ how many cycles remain before failure.
 │   ├── api/                # FastAPI prediction service
 │   └── dashboard/          # Streamlit dashboard, charts, and 3D engine component
 ├── tests/                  # Unit tests (pytest)
+├── scripts/                # Container start script and Space deploy script
+├── deploy/                 # README for the Hugging Face Space
+├── Dockerfile              # Trains the model, then runs the API and dashboard
 ├── pyproject.toml          # Ruff and pytest configuration
-└── requirements.txt
+├── requirements.txt        # Everything for development
+└── requirements-app.txt    # Only what the running app needs, pinned
 ```
 
 ## Quick Start
@@ -86,6 +90,19 @@ API, and a "How it works" page that draws the pipeline as an engine's gas path.
 Its look follows an aircraft engine-indication display: green, amber, and red
 for health, magenta for predictions, and Airbus's B612 cockpit typeface. Add
 `?autoplay=1` to the simulation page's address to start the replay on arrival.
+
+## Run with Docker
+
+The image downloads NASA's data, trains the model, and runs the API and the
+dashboard together. No local data or Python setup is needed.
+
+```bash
+docker build -t turbofan-rul .
+docker run -p 7860:7860 turbofan-rul   # then open http://localhost:7860
+```
+
+`scripts/deploy_space.sh <username>/<space-name>` publishes the committed code
+to a Hugging Face Space, which builds and runs the same Dockerfile.
 
 ## API
 
