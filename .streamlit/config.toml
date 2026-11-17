@@ -1,56 +1,56 @@
-# "Control room" theme for the turbofan dashboard: dark surfaces, a cyan
-# accent like an aircraft display, and status colors that match the health bands.
+# Cockpit-display theme, modeled on an aircraft engine-indication display (EICAS).
+# Colors carry cockpit meaning; src/dashboard/palette.py holds the same values.
 
 [theme]
 base = "dark"
-primaryColor = "#22D3EE"
-backgroundColor = "#0A0F1C"
-secondaryBackgroundColor = "#121A2B"
-codeBackgroundColor = "#121A2B"
-textColor = "#E2E8F0"
-linkColor = "#67E8F9"
-borderColor = "#1F2A40"
-codeTextColor = "#CBD5E1"
+primaryColor = "#3FD0FF"
+backgroundColor = "#000000"
+secondaryBackgroundColor = "#0D0F11"
+codeBackgroundColor = "#0D0F11"
+textColor = "#F2F2F2"
+linkColor = "#3FD0FF"
+borderColor = "#2A2E33"
+codeTextColor = "#F2F2F2"
 showWidgetBorder = true
 showSidebarBorder = true
-baseRadius = "10px"
-buttonRadius = "10px"
-font = "'Inter':https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-headingFont = "'Space Grotesk':https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap"
-codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+baseRadius = "6px"
+buttonRadius = "6px"
+font = "'Atkinson Hyperlegible':https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap"
+headingFont = "'B612':https://fonts.googleapis.com/css2?family=B612:wght@400;700&display=swap"
+codeFont = "'B612 Mono':https://fonts.googleapis.com/css2?family=B612+Mono:wght@400;700&display=swap"
 baseFontSize = 15
 baseFontWeight = 400
 headingFontSizes = ["44px", "28px", "20px", "17px", "15px", "13px"]
-headingFontWeights = [700, 600, 600, 600, 500, 500]
+headingFontWeights = [700, 700, 700, 700, 400, 400]
 metricValueFontSize = "30px"
-metricValueFontWeight = 600
+metricValueFontWeight = 700
 linkUnderline = false
 paddingTop = "1.5rem"
 paddingBottom = "3rem"
 
-# Status colors, also used by badges and the fleet table
-greenColor = "#34D399"
-orangeColor = "#FB923C"
-redColor = "#F87171"
-yellowColor = "#FBBF24"
-blueColor = "#38BDF8"
-violetColor = "#A78BFA"
-grayColor = "#94A3B8"
+# Cockpit status colors: green normal, amber caution, red warning
+greenColor = "#3DDC84"
+orangeColor = "#FFB000"
+redColor = "#FF4040"
+yellowColor = "#FFB000"
+blueColor = "#3FD0FF"
+violetColor = "#FF4FD8"
+grayColor = "#9AA0A6"
 
-# First color is the prediction line, second is the true RUL line
+# Magenta marks computed values (predictions), white measured ones (true RUL)
 chartCategoricalColors = [
-    "#22D3EE",
-    "#94A3B8",
-    "#34D399",
-    "#FB923C",
-    "#F87171",
-    "#A78BFA",
+    "#FF4FD8",
+    "#F2F2F2",
+    "#3DDC84",
+    "#FFB000",
+    "#FF4040",
+    "#3FD0FF",
 ]
-dataframeBorderColor = "#1F2A40"
-dataframeHeaderBackgroundColor = "#121A2B"
-dataframeHeaderTextColor = "#F8FAFC"
+dataframeBorderColor = "#2A2E33"
+dataframeHeaderBackgroundColor = "#0D0F11"
+dataframeHeaderTextColor = "#F2F2F2"
 
 [theme.sidebar]
-backgroundColor = "#070B14"
-secondaryBackgroundColor = "#121A2B"
-borderColor = "#1F2A40"
+backgroundColor = "#000000"
+secondaryBackgroundColor = "#0D0F11"
+borderColor = "#2A2E33"

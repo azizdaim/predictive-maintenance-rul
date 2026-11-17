@@ -72,7 +72,6 @@ view, readout = st.columns([3, 2])
 with view:
     engine_3d(
         status_color=STATUS_HEX[label],
-        label=f"Engine {engine_id} · {label}",
         fan_speed=0.8 - 0.6 * wear,
         glow=0.25 + 0.75 * wear,
         height=420,

@@ -79,9 +79,12 @@ uvicorn src.api.main:app --reload
 streamlit run src/dashboard/app.py
 ```
 
-The dashboard has four pages: a landing page with an interactive 3D engine, a
-fleet overview of all 100 test engines, an engine detail page, and a live
-simulation that replays an engine cycle by cycle through the API. Add
+The dashboard has five pages: a landing page with an interactive 3D engine, a
+fleet overview with a clickable health map of all 100 test engines, an engine
+detail page, a live simulation that replays an engine cycle by cycle through the
+API, and a "How it works" page that draws the pipeline as an engine's gas path.
+Its look follows an aircraft engine-indication display: green, amber, and red
+for health, magenta for predictions, and Airbus's B612 cockpit typeface. Add
 `?autoplay=1` to the simulation page's address to start the replay on arrival.
 
 ## API

@@ -8,10 +8,13 @@ st.echarts_chart, which animates between values when the data changes.
 import pandas as pd
 
 from src.dashboard.client import REPLACE_SOON_BELOW, RUL_CAP, STATUS_HEX, WATCH_BELOW
+from src.dashboard.palette import BEZEL, BLACK, MAGENTA, MUTED, WHITE
 
-# Muted text and grid colors that match the dark theme in .streamlit/config.toml
-_MUTED = "#94A3B8"
-_GRID = "#1F2A40"
+_MUTED = MUTED
+_GRID = BEZEL
+
+# Health bands from most to least urgent, matching the order of their RUL ranges
+SEVERITY_ORDER = ("Replace soon", "Watch", "Healthy")
 
 
 def _band(status: str, low: float, high: float, opacity: float) -> list[dict]:
@@ -61,17 +64,17 @@ def rul_gauge(predicted_rul: float) -> dict:
                 "anchor": {
                     "show": True,
                     "size": 12,
-                    "itemStyle": {"color": "#E2E8F0"},
+                    "itemStyle": {"color": WHITE},
                 },
                 "axisTick": {
                     "distance": -14,
                     "length": 5,
-                    "lineStyle": {"color": "#0A0F1C"},
+                    "lineStyle": {"color": BLACK},
                 },
                 "splitLine": {
                     "distance": -14,
                     "length": 14,
-                    "lineStyle": {"color": "#0A0F1C", "width": 2},
+                    "lineStyle": {"color": BLACK, "width": 2},
                 },
                 "splitNumber": 5,
                 "axisLabel": {"distance": 20, "color": _MUTED, "fontSize": 11},
@@ -151,8 +154,8 @@ def rul_history_chart(
                 "markLine": {
                     "silent": True,
                     "symbol": "none",
-                    "lineStyle": {"color": "#E2E8F0", "type": "dashed"},
-                    "label": {"formatter": f"Cycle {cycle}", "color": "#E2E8F0"},
+                    "lineStyle": {"color": WHITE, "type": "dashed"},
+                    "label": {"formatter": f"Cycle {cycle}", "color": WHITE},
                     "data": [{"xAxis": cycle}],
                 },
             },
@@ -163,5 +166,126 @@ def rul_history_chart(
                 "showSymbol": False,
                 "lineStyle": {"width": 2, "type": "dashed"},
             },
+        ],
+    }
+
+
+def fleet_map(fleet: pd.DataFrame, by_urgency: bool = False, columns: int = 10) -> dict:
+    """Build a grid of clickable tiles, one per engine, colored by health band.
+
+    Args:
+        fleet: One row per engine with 'engine_id' and 'predicted_rul'.
+        by_urgency: Place the lowest predicted RUL first instead of engine order.
+        columns: Tiles per row.
+
+    Returns:
+        dict: ECharts heatmap option. Row i of dataset.source is tile i, so a
+            clicked tile's data index looks up its engine there.
+    """
+    order = "predicted_rul" if by_urgency else "engine_id"
+    tiles = fleet.sort_values(order, ignore_index=True)[["engine_id", "predicted_rul"]]
+    tiles["predicted_rul"] = tiles["predicted_rul"].round().astype(int)
+    tiles.insert(0, "column", (tiles.index % columns).astype(str))
+    tiles.insert(1, "row", (tiles.index // columns).astype(str))
+    n_rows = -(-len(tiles) // columns)  # ceiling division
+
+    pieces = [
+        {"lt": REPLACE_SOON_BELOW, "label": f"Replace soon (<{REPLACE_SOON_BELOW})"},
+        {"gte": REPLACE_SOON_BELOW, "lt": WATCH_BELOW, "label": "Watch"},
+        {"gte": WATCH_BELOW, "label": f"Healthy ({WATCH_BELOW}+)"},
+    ]
+    for piece, status in zip(pieces, SEVERITY_ORDER, strict=True):
+        piece["color"] = STATUS_HEX[status]
+
+    return {
+        "dataset": {"source": tiles},
+        "tooltip": {
+            "formatter": "Engine {@engine_id}<br/>{@predicted_rul} cycles left"
+        },
+        "grid": {"left": 4, "right": 4, "top": 44, "bottom": 4},
+        "xAxis": {
+            "type": "category",
+            "data": [str(i) for i in range(columns)],
+            "show": False,
+        },
+        "yAxis": {
+            "type": "category",
+            "data": [str(i) for i in range(n_rows)],
+            "inverse": True,
+            "show": False,
+        },
+        "visualMap": {
+            "type": "piecewise",
+            "dimension": 3,  # predicted_rul
+            "pieces": pieces,
+            "orient": "horizontal",
+            "itemGap": 24,
+            "top": 0,
+            "left": "center",
+            "textStyle": {"color": _MUTED},
+        },
+        "series": [
+            {
+                "type": "heatmap",
+                "encode": {"x": "column", "y": "row", "value": "predicted_rul"},
+                "selectedMode": "single",
+                "label": {
+                    "show": True,
+                    "formatter": "{@engine_id}",
+                    "color": BLACK,
+                    "fontWeight": 600,
+                },
+                "itemStyle": {
+                    "borderColor": BLACK,
+                    "borderWidth": 3,
+                    "borderRadius": 6,
+                },
+                "emphasis": {"itemStyle": {"borderColor": WHITE}},
+                "select": {"itemStyle": {"borderColor": WHITE}},
+            }
+        ],
+    }
+
+
+def section_importance_chart(ablation: pd.DataFrame) -> dict:
+    """Build a bar chart of how much worse the model gets without each section.
+
+    Args:
+        ablation: Ablation results with 'study', 'variant', and 'rmse_change'.
+
+    Returns:
+        dict: ECharts option with one horizontal bar per engine section, the
+            most important at the top.
+    """
+    sections = ablation[ablation["study"] == "Engine section"].copy()
+    sections["section"] = (
+        sections["variant"].str.removeprefix("Without ").str.capitalize()
+    )
+    sections["rmse_change"] = sections["rmse_change"].round(2)
+    sections = sections.sort_values("rmse_change")[["section", "rmse_change"]]
+    return {
+        "dataset": {"source": sections},
+        "grid": {"left": 8, "right": 48, "top": 8, "bottom": 8, "containLabel": True},
+        "tooltip": {"trigger": "axis", "valueFormatter": "+%.2f cycles"},
+        "xAxis": {"type": "value", "show": False},
+        "yAxis": {
+            "type": "category",
+            "axisTick": {"show": False},
+            "axisLine": {"show": False},
+            "axisLabel": {"color": WHITE},
+        },
+        "series": [
+            {
+                "type": "bar",
+                "encode": {"x": "rmse_change", "y": "section"},
+                "itemStyle": {"color": MAGENTA},
+                "barWidth": "55%",
+                "label": {
+                    "show": True,
+                    "position": "right",
+                    "formatter": "+{@rmse_change}",
+                    "color": MUTED,
+                },
+            }
         ],
     }

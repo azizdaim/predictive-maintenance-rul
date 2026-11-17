@@ -5,6 +5,7 @@ import os
 import httpx
 import pandas as pd
 
+from src.dashboard.palette import AMBER, GREEN, RED
 from src.data.loader import DATASET_PATH, load_data
 
 # Where the FastAPI service runs; override with the RUL_API_URL environment variable
@@ -21,8 +22,8 @@ WATCH_BELOW = 60
 # Label colors, most urgent first, so tables and badges stay consistent
 STATUS_COLORS = {"Replace soon": "red", "Watch": "orange", "Healthy": "green"}
 
-# The same colors as hex codes, matching .streamlit/config.toml, for custom visuals
-STATUS_HEX = {"Replace soon": "#F87171", "Watch": "#FB923C", "Healthy": "#34D399"}
+# The same colors as hex codes, for custom visuals: cockpit red, amber, and green
+STATUS_HEX = {"Replace soon": RED, "Watch": AMBER, "Healthy": GREEN}
 
 
 def load_test_engines() -> pd.DataFrame:

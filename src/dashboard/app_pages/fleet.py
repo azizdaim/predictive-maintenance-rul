@@ -3,6 +3,7 @@
 import httpx
 import streamlit as st
 
+from src.dashboard.charts import fleet_map
 from src.dashboard.client import (
     REPLACE_SOON_BELOW,
     RUL_CAP,
@@ -33,6 +34,38 @@ with st.container(horizontal=True):
         st.metric(
             label, f"{counts.get(label, 0)} engines", border=True, help=BAND_HELP[label]
         )
+
+with st.container(border=True):
+    with st.container(horizontal=True, vertical_alignment="center"):
+        st.markdown("**Fleet health map**")
+        st.space("stretch")
+        arrangement = st.segmented_control(
+            "Arrange by",
+            options=["Engine number", "Urgency"],
+            default="Engine number",
+            required=True,
+            label_visibility="collapsed",
+            key="map_order",
+        )
+    tile_map = fleet_map(fleet, by_urgency=arrangement == "Urgency")
+    clicked = st.echarts_chart(
+        tile_map,
+        height=480,
+        key="fleet_map",
+        on_select="rerun",
+        alt="Grid of the 100 test engines colored by health band",
+    )
+    st.caption(
+        "Click a tile to open that engine. Click a band in the legend to hide it."
+    )
+
+tile_indices = [
+    i for group in clicked.selection.selected for i in group["data_indices"]
+]
+if tile_indices:
+    tiles = tile_map["dataset"]["source"]
+    st.session_state.engine_id = int(tiles.loc[tile_indices[0], "engine_id"])
+    st.switch_page("app_pages/engine.py")
 
 table = fleet.assign(status=fleet["status"].map(lambda s: [s]))
 

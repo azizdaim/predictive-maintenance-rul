@@ -157,23 +157,34 @@ def test_simulation_replays_engine_and_raises_alerts() -> None:
     """Verify play advances the replay, alerts fire, and it stops at the end."""
     at = AppTest.from_file(APP_PATH, default_timeout=60).run()
     at.switch_page("app_pages/simulate.py").run()
-    assert at.subheader[0].value == "Engine 31 · cycle 0 of 196"
+    assert at.subheader[0].value == "Engine 31, cycle 0 of 196"
 
     at.segmented_control(key="sim_speed").set_value("Very fast")
     at.button(key="sim_play").click().run()
     assert not at.exception
-    assert at.subheader[0].value == "Engine 31 · cycle 10 of 196"
+    assert at.subheader[0].value == "Engine 31, cycle 10 of 196"
 
     # The timer does not run in tests, so each rerun stands in for one tick
     for _ in range(25):
         at.run()
-    assert at.subheader[0].value == "Engine 31 · cycle 196 of 196"
+    assert at.subheader[0].value == "Engine 31, cycle 196 of 196"
     assert at.button(key="sim_play").label == "Play"
     alerts = [m.value for m in at.markdown if "entered" in m.value]
     assert [a.split(": entered ")[1] for a in alerts] == ["watch", "replace soon"]
 
     at.button(key="sim_reset").click().run()
-    assert at.subheader[0].value == "Engine 31 · cycle 0 of 196"
+    assert at.subheader[0].value == "Engine 31, cycle 0 of 196"
+
+
+@pytest.mark.usefixtures("api_through_httpx")
+def test_how_it_works_page_shows_live_scores_and_limits() -> None:
+    """Verify the page fills its model note from the API and lists limits."""
+    at = AppTest.from_file(APP_PATH, default_timeout=60).run()
+    at.switch_page("app_pages/about.py").run()
+
+    assert not at.exception
+    headers = [h.value for h in at.header]
+    assert headers == ["What the experiments showed", "Limitations"]
 
 
 def test_dashboard_explains_when_api_is_down(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -41,6 +41,13 @@ page = st.navigation(
             help="Replay an engine cycle by cycle through the prediction API and "
             "watch the alerts fire as it wears out.",
         ),
+        st.Page(
+            "app_pages/about.py",
+            title="How it works",
+            icon=":material/info:",
+            help="The project pipeline drawn as an engine's gas path, what the "
+            "experiments showed, and the model's limits.",
+        ),
     ],
     position="top",
 )
