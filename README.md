@@ -47,8 +47,7 @@ how many cycles remain before failure.
 │   ├── api/                # FastAPI prediction service
 │   └── dashboard/          # Streamlit dashboard, charts, and 3D engine component
 ├── tests/                  # Unit tests (pytest)
-├── scripts/                # Container start script and Space deploy script
-├── deploy/                 # README for the Hugging Face Space
+├── scripts/                # Starts the API and dashboard in the container
 ├── Dockerfile              # Trains the model, then runs the API and dashboard
 ├── pyproject.toml          # Ruff and pytest configuration
 ├── requirements.txt        # Everything for development
@@ -101,8 +100,10 @@ docker build -t turbofan-rul .
 docker run -p 7860:7860 turbofan-rul   # then open http://localhost:7860
 ```
 
-`scripts/deploy_space.sh <username>/<space-name>` publishes the committed code
-to a Hugging Face Space, which builds and runs the same Dockerfile.
+The hosted demo runs on Streamlit Community Cloud, which runs a single Streamlit
+app. There, `RUL_EMBEDDED_API=1` starts the FastAPI service in a background
+thread of the dashboard's process, and the dashboard still calls it over HTTP.
+The served model and the two test data files it reads are committed for this.
 
 ## API
 
