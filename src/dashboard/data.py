@@ -60,18 +60,20 @@ def api_unavailable_message() -> str:
     command that starts the API.
     """
     if embedded_api_enabled():
-        return "Live predictions are temporarily unavailable. Try again in a minute."
+        return (
+            "The live model service is temporarily unavailable. Try again in a minute."
+        )
     return (
         f"The dashboard gets its predictions from the FastAPI service at {API_URL}. "
         "Start it in another terminal with `uvicorn src.api.main:app`, then refresh."
     )
 
 
-def show_api_error() -> None:
-    """Explain that predictions are unavailable, then stop the page."""
+def show_api_error(title: str = "Predictions unavailable") -> None:
+    """Explain that the API is unavailable, then stop the page."""
     st.error(
         api_unavailable_message(),
-        title="Predictions unavailable",
+        title=title,
         icon=":material/cloud_off:",
     )
     st.stop()

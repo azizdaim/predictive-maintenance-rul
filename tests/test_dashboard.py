@@ -286,11 +286,32 @@ def test_drift_page_compares_fleets() -> None:
     at.switch_page("app_pages/drift.py").run()
 
     assert not at.exception
-    assert at.header[0].value == "Same fleet as training"
     assert at.metric[0].value == "0 of 14"
+    assert any("Its predictions here can be trusted" in m.value for m in at.markdown)
 
     at.segmented_control(key="drift_fleet").set_value("FD002").run()
 
     assert not at.exception
-    assert at.header[0].value == "Six operating conditions"
     assert at.metric[0].value == "14 of 14"
+    verdict = next(m.value for m in at.markdown if m.value.startswith("All 14"))
+    assert "six operating conditions" in verdict
+    assert "3.4 times higher" in verdict
+    assert at.table[0].value.shape == (14, 4)
+
+
+def test_drift_page_explains_when_api_is_down(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify the drift page names itself in the error and keeps the fleet picker."""
+
+    def refuse(url: str, **kwargs: object) -> httpx.Response:
+        raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr(httpx, "post", refuse)
+    monkeypatch.setattr(httpx, "get", refuse)
+    st.cache_data.clear()
+
+    at = AppTest.from_file(APP_PATH, default_timeout=30).run()
+    at.switch_page("app_pages/drift.py").run()
+
+    assert not at.exception
+    assert at.error[0].proto.title == "Drift check unavailable"
+    assert at.segmented_control(key="drift_fleet").value == "FD001"

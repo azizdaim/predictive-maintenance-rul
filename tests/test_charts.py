@@ -86,3 +86,25 @@ def test_drift_chart_puts_the_most_drifted_sensor_on_top() -> None:
     assert bars[-1]["itemStyle"]["color"] == DRIFT_HEX["Drifted"]
     assert bars[0]["itemStyle"]["color"] == DRIFT_HEX["Stable"]
     assert option["xAxis"]["max"] == 0.5
+    assert bars[0]["label"]["formatter"] == "0.02"
+    assert "markLine" in option["series"][0]
+
+
+def test_drift_chart_rounds_long_scales_and_shades_the_normal_zone() -> None:
+    """Verify a large PSI gets a whole-number axis end and one shaded zone."""
+    from src.dashboard.charts import drift_chart
+
+    sensors = pd.DataFrame(
+        {
+            "sensor": ["sensor_17"],
+            "section": ["Combustor"],
+            "psi": [3.62],
+            "status": ["Drifted"],
+        }
+    )
+
+    option = drift_chart(sensors)
+
+    assert option["xAxis"]["max"] == 5
+    assert "markArea" in option["series"][0]
+    assert "markLine" not in option["series"][0]

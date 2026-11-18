@@ -5,6 +5,8 @@ design can be tested without a browser. Pages pass the dicts to
 st.echarts_chart, which animates between values when the data changes.
 """
 
+import math
+
 import pandas as pd
 
 from src.dashboard.client import (
@@ -21,6 +23,7 @@ from src.dashboard.palette import (
     GREEN_DIM,
     MUTED,
     RED,
+    STEEL,
     TRACK,
     WHITE,
 )
@@ -278,11 +281,14 @@ def drift_chart(sensors: pd.DataFrame) -> dict:
 
     Returns:
         dict: ECharts option with one horizontal bar per sensor, the most
-            drifted at the top, and dashed lines at the watch and drift limits.
+            drifted at the top, and the watch and drift limits marked.
     """
     rows = sensors.iloc[::-1]
-    # Never shorter than the drift limit, so small scores look small
-    x_max = round(max(0.5, float(sensors["psi"].max()) * 1.15), 1)
+    # Never shorter than 0.5, so small scores look small; round the end up to
+    # a tenth on a short scale and a whole number on a long one
+    top = max(0.5, float(sensors["psi"].max()) * 1.15)
+    step = 0.1 if top <= 1 else 1
+    x_max = round(math.ceil(top / step) * step, 1)
 
     def limit(value: float, name: str, color: str) -> dict:
         return {
@@ -291,16 +297,41 @@ def drift_chart(sensors: pd.DataFrame) -> dict:
             "label": {"formatter": name, "color": color, "position": "end"},
         }
 
-    # On a wide scale the two limit lines nearly touch, so only Drift is named
-    watch_line = limit(WATCH_FROM, "Watch", AMBER)
-    watch_line["label"]["show"] = x_max <= 1
+    if x_max <= 1:
+        marks = {
+            "markLine": {
+                "silent": True,
+                "symbol": "none",
+                "data": [
+                    limit(WATCH_FROM, "Watch", AMBER),
+                    limit(DRIFTED_FROM, "Drifted", RED),
+                ],
+            }
+        }
+    else:
+        # On a long scale the two limits nearly touch, so one shaded zone
+        # marks everything below the drift limit instead
+        marks = {
+            "markArea": {
+                "silent": True,
+                "itemStyle": {"color": GREEN_DIM, "opacity": 0.18},
+                "label": {"position": "top", "color": _MUTED, "align": "left"},
+                "data": [
+                    [{"name": "Below drift limit", "xAxis": 0}, {"xAxis": DRIFTED_FROM}]
+                ],
+            }
+        }
 
     return {
-        "grid": {"left": 8, "right": 56, "top": 28, "bottom": 8, "containLabel": True},
+        "grid": {"left": 8, "right": 48, "top": 28, "bottom": 28, "containLabel": True},
         "xAxis": {
             "type": "value",
             "min": 0,
             "max": x_max,
+            "name": "Drift score (PSI)",
+            "nameLocation": "middle",
+            "nameGap": 26,
+            "nameTextStyle": {"color": _MUTED},
             "splitLine": {"lineStyle": {"color": _GRID}},
             "axisLabel": {"color": _MUTED},
         },
@@ -323,18 +354,20 @@ def drift_chart(sensors: pd.DataFrame) -> dict:
                     {
                         "value": round(r.psi, 2),
                         "itemStyle": {"color": DRIFT_HEX[r.status]},
+                        # Always two decimals, so 0.40 lines up with 0.47
+                        "label": {"formatter": f"{r.psi:.2f}"},
                     }
                     for r in rows.itertuples()
                 ],
-                "label": {"show": True, "position": "right", "color": _MUTED},
-                "markLine": {
-                    "silent": True,
-                    "symbol": "none",
-                    "data": [
-                        watch_line,
-                        limit(DRIFTED_FROM, "Drift", RED),
-                    ],
+                # A black pad keeps the value readable where it meets a limit line
+                "label": {
+                    "show": True,
+                    "position": "right",
+                    "color": _MUTED,
+                    "backgroundColor": BLACK,
+                    "padding": [0, 3],
                 },
+                **marks,
             }
         ],
     }
@@ -357,13 +390,13 @@ def distribution_chart(reference_shares: list[float], new_shares: list[float]) -
 
     return {
         "legend": {"top": 0, "right": 0, "textStyle": {"color": _MUTED}},
-        "grid": {"left": 48, "right": 16, "top": 36, "bottom": 48},
+        "grid": {"left": 48, "right": 16, "top": 36, "bottom": 34},
         "xAxis": {
             "type": "category",
             "data": buckets,
             "name": "Training range, lowest to highest",
             "nameLocation": "middle",
-            "nameGap": 28,
+            "nameGap": 24,
         },
         "yAxis": {
             "type": "value",
@@ -377,7 +410,7 @@ def distribution_chart(reference_shares: list[float], new_shares: list[float]) -
                 "type": "bar",
                 "silent": True,
                 "data": percent(reference_shares),
-                "itemStyle": {"color": TRACK},
+                "itemStyle": {"color": STEEL},
             },
             {
                 "name": "This fleet",

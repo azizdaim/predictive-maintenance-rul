@@ -20,3 +20,4 @@ CYAN = "#3FD0FF"  # selectable controls
 
 GREEN_DIM = "#5E8A70"  # healthy, kept quiet: normal is the calmest state
 TRACK = "#3A3F45"  # gauge track, so only the limit marks carry colour
+STEEL = "#6B7178"  # reference data in charts: 4.3:1 on black, below white
