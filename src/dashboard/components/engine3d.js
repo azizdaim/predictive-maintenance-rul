@@ -230,6 +230,9 @@ function buildEngine(THREE, root, data) {
       m.userData.baseEmissive = state.status.clone().lerp(new THREE.Color(0xff7a2f), 0.35);
       if (hovered !== "hpt" && hovered !== "lpt") m.emissive.copy(m.userData.baseEmissive);
     }
+    // Screen readers get one sentence instead of a silent canvas
+    root.setAttribute("role", "img");
+    root.setAttribute("aria-label", next.description || "3D turbofan engine");
     chip.hidden = !next.label;
     chip.querySelector(".chip-text").textContent = next.label || "";
     chip.querySelector(".dot").style.color = next.status_color || "#3FD0FF";
@@ -248,17 +251,24 @@ function buildEngine(THREE, root, data) {
 
   let frame = 0;
   const clock = new THREE.Clock();
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   function tick() {
     frame = requestAnimationFrame(tick);
     const dt = Math.min(clock.getDelta(), 0.05);
     const t = clock.elapsedTime;
-    if (!dragging && performance.now() - idleSince > 2500) targetYaw += dt * 0.18;
+    // Visitors who ask their device to reduce motion get a still engine
+    const still = reducedMotion.matches;
+    if (!still && !dragging && performance.now() - idleSince > 2500) {
+      targetYaw += dt * 0.18;
+    }
     yaw += (targetYaw - yaw) * 0.08;
     tilt += (targetTilt - tilt) * 0.08;
     pivot.rotation.set(tilt, yaw, 0);
-    fanRotor.rotation.y += dt * (2 + state.fanSpeed * 14);
-    coreRotor.rotation.y += dt * (4 + state.fanSpeed * 22);
-    const pulse = 0.75 + 0.25 * Math.sin(t * 3);
+    if (!still) {
+      fanRotor.rotation.y += dt * (2 + state.fanSpeed * 14);
+      coreRotor.rotation.y += dt * (4 + state.fanSpeed * 22);
+    }
+    const pulse = still ? 1 : 0.75 + 0.25 * Math.sin(t * 3);
     coreLight.intensity = 3 + state.glow * 9 * pulse;
     halo.material.opacity = 0.55 + 0.4 * pulse;
     renderer.render(scene, camera);

@@ -5,13 +5,44 @@ import pandas as pd
 import streamlit as st
 
 from src.dashboard.charts import section_importance_chart
+from src.dashboard.client import (
+    DEFAULT_REPLAY_SPEED,
+    REPLAY_SPEEDS,
+    REPO_URL,
+    cycles_text,
+    first_alerts,
+)
 from src.dashboard.components.gas_path import Stage, gas_path
-from src.dashboard.data import get_ablation_results, get_model_info
+from src.dashboard.data import (
+    get_ablation_results,
+    get_model_info,
+    get_predictions,
+    get_true_rul,
+)
 
 # Written by the project author; the section is hidden while this is empty
 KEY_FINDINGS = ""
 
-REPO_URL = "https://github.com/azizdaim/predictive-maintenance-rul"
+
+# Computed from the same replay the Live simulation page runs, so the numbers
+# here always match what a visitor sees there
+DEMO_ENGINE = 31
+try:
+    truth = get_true_rul()
+    alerts = first_alerts(
+        get_predictions(DEMO_ENGINE),
+        truth[truth["engine_id"] == DEMO_ENGINE],
+        REPLAY_SPEEDS[DEFAULT_REPLAY_SPEED],
+    )
+    watch, replace = alerts["Watch"], alerts["Replace soon"]
+    early_warning = (
+        "**Warnings come early enough to act on.** In the live replay at the "
+        f"default speed, engine {DEMO_ENGINE} is flagged for watching with "
+        f"{cycles_text(watch[1])} actually left and for replacement with "
+        f"{cycles_text(replace[1])}."
+    )
+except (httpx.HTTPError, KeyError):
+    early_warning = ""
 
 metrics = None
 try:
@@ -56,9 +87,9 @@ STAGES = [
     ),
 ]
 
-st.title("How it works", icon=":material/info:", anchor=False)
-# Prose stays near 80 characters a line, which is easier to read than full width
-PROSE_WIDTH = 720
+st.title("How it works", anchor=False)
+# Prose stays near 70 characters a line, which is easier to read than full width
+PROSE_WIDTH = 560
 
 st.markdown(
     width=PROSE_WIDTH,
@@ -109,9 +140,7 @@ with findings:
         "**Half the features do the same job.** Raw readings, rolling spreads, and "
         "operating settings were removed together, and accuracy did not drop. The "
         "served model uses the remaining 30 features out of 62.\n\n"
-        "**Warnings come early enough to act on.** In the live replay at the default "
-        "speed, engine 31 is flagged for watching with 59 cycles left and for "
-        "replacement with 24."
+        f"{early_warning}"
     )
 with chart:
     st.markdown("**Extra error when one engine section's sensors are removed**")

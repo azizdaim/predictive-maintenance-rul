@@ -17,3 +17,6 @@ AMBER = "#FFB000"  # caution
 RED = "#FF4040"  # warning
 MAGENTA = "#FF4FD8"  # computed values: the model's predictions
 CYAN = "#3FD0FF"  # selectable controls
+
+GREEN_DIM = "#5E8A70"  # healthy, kept quiet: normal is the calmest state
+TRACK = "#3A3F45"  # gauge track, so only the limit marks carry colour

@@ -14,11 +14,12 @@ import pandas as pd
 import streamlit as st
 
 from src.dashboard.client import REPLACE_SOON_BELOW, STATUS_HEX, WATCH_BELOW
+from src.dashboard.palette import MUTED
 
 # Legend order and labels, most urgent first
 BANDS = [
     ("Replace soon", f"Replace soon (<{REPLACE_SOON_BELOW})"),
-    ("Watch", "Watch"),
+    ("Watch", f"Watch ({REPLACE_SOON_BELOW}–{WATCH_BELOW - 1})"),
     ("Healthy", f"Healthy ({WATCH_BELOW}+)"),
 ]
 
@@ -89,6 +90,7 @@ def fleet_map(
             ],
             # Healthy outlines are dimmed: normal is the quietest state
             "healthyDim": STATUS_HEX["Healthy"] + "73",
+            "muted": MUTED,
         },
         key=key,
         on_clicked_change=on_click,

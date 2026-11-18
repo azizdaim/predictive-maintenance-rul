@@ -8,20 +8,26 @@ from src.dashboard.charts import (
     section_importance_chart,
 )
 from src.dashboard.client import RUL_CAP, STATUS_HEX
+from src.dashboard.palette import TRACK
 
 
-def test_gauge_shows_rounded_prediction_with_band_colors() -> None:
-    """Verify the gauge spans 0 to the cap and colors its bands by health."""
+def test_gauge_is_a_cockpit_dial_with_limit_marks() -> None:
+    """Verify a muted track with red and amber limit marks, needle in status colour."""
     series = rul_gauge(9.4)["series"][0]
 
     assert series["data"][0]["value"] == 9
     assert (series["min"], series["max"]) == (0, RUL_CAP)
-    band_colors = [color for _, color in series["axisLine"]["lineStyle"]["color"]]
-    assert band_colors == [
+    colors = [color for _, color in series["axisLine"]["lineStyle"]["color"]]
+    assert colors == [
+        TRACK,
         STATUS_HEX["Replace soon"],
+        TRACK,
         STATUS_HEX["Watch"],
-        STATUS_HEX["Healthy"],
+        TRACK,
     ]
+    # 9 cycles left is "Replace soon", so the needle and value are red
+    assert series["pointer"]["itemStyle"]["color"] == STATUS_HEX["Replace soon"]
+    assert series["detail"]["color"] == STATUS_HEX["Replace soon"]
 
 
 def test_history_chart_reads_the_frame_and_marks_the_cycle() -> None:
@@ -37,7 +43,7 @@ def test_history_chart_reads_the_frame_and_marks_the_cycle() -> None:
     option = rul_history_chart(engine, cycle=2)
 
     source = option["dataset"]["source"]
-    assert list(source.columns) == ["cycle", "Predicted", "True"]
+    assert list(source.columns) == ["cycle", "Predicted", "Actual"]
     assert len(source) == 3
     assert option["series"][0]["markLine"]["data"] == [{"xAxis": 2}]
     assert (option["xAxis"]["min"], option["xAxis"]["max"]) == (1, 3)

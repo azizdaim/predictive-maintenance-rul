@@ -41,6 +41,8 @@ st.html(
 }}
 ::selection {{ background: {CYAN}; color: {BLACK}; }}
 table, [data-testid="stMetricValue"] {{ font-variant-numeric: tabular-nums; }}
+h1, h2 {{ text-wrap: balance; }}
+.stMarkdown p, .stMarkdown li {{ text-wrap: pretty; }}
 .status-pill {{
   display: inline-block; padding: 2px 10px; border-radius: 6px;
   font: 700 0.85rem var(--st-font); border: 1px solid transparent;
@@ -51,9 +53,22 @@ table, [data-testid="stMetricValue"] {{ font-variant-numeric: tabular-nums; }}
 </style>"""
 )
 
-# Shared between pages: the fleet table sets it, the engine page reads it
-if "engine_id" not in st.session_state:
-    st.session_state.engine_id = 31
+# Navigation icons are drawn from icon-font ligatures, so screen readers read
+# their names aloud ("dashboard Fleet overview"); mark them decorative. Nav
+# links have no key, so their test ids are the only hooks.
+st.html(
+    """<script>
+if (!window.__navIconsMuted) {
+  window.__navIconsMuted = true;
+  const mute = () => document
+    .querySelectorAll('[data-testid="stTopNavLink"] [data-testid="stIconMaterial"]')
+    .forEach((icon) => icon.setAttribute("aria-hidden", "true"));
+  mute();
+  new MutationObserver(mute).observe(document.body, { childList: true, subtree: true });
+}
+</script>""",
+    unsafe_allow_javascript=True,
+)
 
 page = st.navigation(
     [

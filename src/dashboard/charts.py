@@ -7,8 +7,14 @@ st.echarts_chart, which animates between values when the data changes.
 
 import pandas as pd
 
-from src.dashboard.client import REPLACE_SOON_BELOW, RUL_CAP, STATUS_HEX, WATCH_BELOW
-from src.dashboard.palette import BEZEL, BLACK, MUTED, WHITE
+from src.dashboard.client import (
+    REPLACE_SOON_BELOW,
+    RUL_CAP,
+    STATUS_HEX,
+    WATCH_BELOW,
+    health_status,
+)
+from src.dashboard.palette import BEZEL, BLACK, MUTED, TRACK, WHITE
 
 _MUTED = MUTED
 _GRID = BEZEL
@@ -37,11 +43,18 @@ def rul_gauge(predicted_rul: float) -> dict:
     Returns:
         dict: ECharts option with one gauge series from 0 to the RUL cap.
     """
+
+    # A cockpit dial: a muted track with thin amber and red limit marks, and
+    # only the needle and value in the current status colour
+    def mark(limit: int, color: str) -> list:
+        return [[(limit - 1) / RUL_CAP, TRACK], [(limit + 1) / RUL_CAP, color]]
+
     bands = [
-        [REPLACE_SOON_BELOW / RUL_CAP, STATUS_HEX["Replace soon"]],
-        [WATCH_BELOW / RUL_CAP, STATUS_HEX["Watch"]],
-        [1, STATUS_HEX["Healthy"]],
+        *mark(REPLACE_SOON_BELOW, STATUS_HEX["Replace soon"]),
+        *mark(WATCH_BELOW, STATUS_HEX["Watch"]),
+        [1, TRACK],
     ]
+    status_color = STATUS_HEX[health_status(predicted_rul)[0]]
     return {
         "series": [
             {
@@ -56,7 +69,7 @@ def rul_gauge(predicted_rul: float) -> dict:
                 "pointer": {
                     "length": "62%",
                     "width": 5,
-                    "itemStyle": {"color": "auto"},
+                    "itemStyle": {"color": status_color},
                 },
                 "anchor": {
                     "show": True,
@@ -79,7 +92,7 @@ def rul_gauge(predicted_rul: float) -> dict:
                 "detail": {
                     "offsetCenter": [0, "40%"],
                     "formatter": "{value}",
-                    "color": "auto",
+                    "color": status_color,
                     "fontSize": 34,
                     "fontWeight": 600,
                 },
@@ -111,7 +124,7 @@ def rul_history_chart(
         dict: ECharts option reading the frame through dataset.source.
     """
     source = engine[["cycle", "predicted_rul", "true_rul"]].rename(
-        columns={"predicted_rul": "Predicted", "true_rul": "True"}
+        columns={"predicted_rul": "Predicted", "true_rul": "Actual"}
     )
     band_areas = [
         _band("Replace soon", 0, REPLACE_SOON_BELOW, opacity=0.16),
@@ -141,7 +154,26 @@ def rul_history_chart(
         },
         "dataZoom": [
             {"type": "inside"},
-            {"type": "slider", "height": 18, "bottom": 8},
+            {
+                # Palette colours instead of ECharts' default blue-grey
+                "type": "slider",
+                "height": 18,
+                "bottom": 8,
+                "borderColor": BEZEL,
+                "backgroundColor": BLACK,
+                "fillerColor": "rgba(242, 242, 242, 0.08)",
+                "dataBackground": {
+                    "lineStyle": {"color": MUTED, "opacity": 0.5},
+                    "areaStyle": {"color": MUTED, "opacity": 0.15},
+                },
+                "selectedDataBackground": {
+                    "lineStyle": {"color": WHITE, "opacity": 0.6},
+                    "areaStyle": {"color": WHITE, "opacity": 0.15},
+                },
+                "handleStyle": {"color": MUTED, "borderColor": BEZEL},
+                "moveHandleStyle": {"color": MUTED},
+                "textStyle": {"color": MUTED},
+            },
         ],
         "series": [
             {
@@ -155,14 +187,19 @@ def rul_history_chart(
                     "silent": True,
                     "symbol": "none",
                     "lineStyle": {"color": WHITE, "type": "dashed"},
-                    "label": {"formatter": f"Cycle {cycle}", "color": WHITE},
+                    # Right-aligned so it stays inside the chart at the last cycle
+                    "label": {
+                        "formatter": f"Cycle {cycle}",
+                        "color": WHITE,
+                        "align": "right",
+                    },
                     "data": [{"xAxis": cycle}],
                 },
             },
             {
-                "name": "True",
+                "name": "Actual",
                 "type": "line",
-                "encode": {"x": "cycle", "y": "True"},
+                "encode": {"x": "cycle", "y": "Actual"},
                 "showSymbol": False,
                 "lineStyle": {"width": 2, "type": "dashed"},
             },

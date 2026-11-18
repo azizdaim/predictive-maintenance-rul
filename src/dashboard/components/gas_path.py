@@ -125,9 +125,16 @@ def _link_rules(n_stages: int) -> str:
     Hovering or focusing note i lights band i, and hovering band i lights
     note i. The :has() selector lets the container react to either one.
     """
-    rules = []
+    lit_band = f"fill: {CYAN}; fill-opacity: 0.22; stroke: {CYAN};"
+    # Until a visitor points at a stage, stage 1 is lit so the diagram never
+    # looks empty and shows at once that the stages respond
+    idle = ".gas-path:not(:has(.band:hover, .note:hover, .note:focus-visible))"
+    rules = [
+        f"{idle} .band-0 {{ {lit_band} }}",
+        f"{idle} .note-0 {{ border-top-color: {CYAN}; }}",
+        f"{idle} .note-0 h4 {{ color: {CYAN}; }}",
+    ]
     for i in range(n_stages):
-        lit_band = f"fill: {CYAN}; fill-opacity: 0.22; stroke: {CYAN};"
         rules += [
             f".gas-path:has(.note-{i}:hover) .band-{i},"
             f".gas-path:has(.note-{i}:focus-visible) .band-{i},"

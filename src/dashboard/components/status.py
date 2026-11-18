@@ -12,7 +12,6 @@ _CLASS = {"Healthy": "healthy", "Watch": "watch", "Replace soon": "replace"}
 
 def status_pill(label: str) -> None:
     """Show a health status label styled by its urgency."""
-    st.space("stretch")  # push the pill to the right edge of its row
     st.html(
         f'<span class="status-pill status-{_CLASS[label]}">{label}</span>',
         width="content",
