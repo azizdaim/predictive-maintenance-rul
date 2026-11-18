@@ -54,7 +54,7 @@ STAGES = [
     ),
 ]
 
-st.title("How it works", icon=":material/info:")
+st.title("How it works", icon=":material/info:", anchor=False)
 # Prose stays near 80 characters a line, which is easier to read than full width
 PROSE_WIDTH = 720
 
@@ -67,7 +67,7 @@ st.markdown(
 gas_path(STAGES)
 
 st.space("medium")
-st.header("What the experiments showed")
+st.header("What the experiments showed", anchor=False)
 
 findings, chart = st.columns([1, 1], gap="large")
 with findings:
@@ -95,10 +95,10 @@ with chart:
     )
 
 if KEY_FINDINGS:
-    st.header("In my own words")
+    st.header("In my own words", anchor=False)
     st.markdown(KEY_FINDINGS)
 
-st.header("Limitations")
+st.header("Limitations", anchor=False)
 st.markdown(
     width=PROSE_WIDTH,
     body="- **One simulated scenario.** The model is trained and tested on FD001: one "

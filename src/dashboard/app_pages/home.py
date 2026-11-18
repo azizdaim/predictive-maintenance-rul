@@ -80,7 +80,7 @@ with kpi_row:
 
 with results:
     st.space("medium")
-    st.subheader("Model results")
+    st.subheader("Model results", anchor=False)
     m = info["metrics"]
     with st.container(horizontal=True):
         st.metric(

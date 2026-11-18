@@ -20,7 +20,7 @@ from src.dashboard.data import (
 )
 from src.features.build_features import TREND_LAG
 
-st.title("Engine detail", icon=":material/monitoring:")
+st.title("Engine detail", icon=":material/monitoring:", anchor=False)
 st.caption(
     "Pick an engine and move back through its history to see how its health "
     "and the model's prediction changed, cycle by cycle."
@@ -63,7 +63,7 @@ actual = float(current["true_rul"])
 label, color = health_status(predicted)
 
 with st.container(horizontal=True, vertical_alignment="center"):
-    st.subheader(f"Engine {engine_id} at cycle {cycle}")
+    st.subheader(f"Engine {engine_id} at cycle {cycle}", anchor=False)
     st.badge(label, color=color)
 
 # Closer to failure: the core glows harder and the rotors slow down

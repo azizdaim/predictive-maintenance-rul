@@ -67,7 +67,7 @@ def advance(rows: pd.DataFrame, last_cycle: int) -> None:
         )
 
 
-st.title("Live simulation", icon=":material/play_circle:")
+st.title("Live simulation", icon=":material/play_circle:", anchor=False)
 st.caption(
     "Replay a test engine as if it were reporting in live. Each step sends the "
     "readings so far to the prediction API, so the model only ever sees the past."
@@ -127,7 +127,7 @@ def live_view() -> None:
         label = health_status(predicted)[0]
 
     with st.container(horizontal=True, vertical_alignment="center"):
-        st.subheader(f"Engine {engine_id}, cycle {cycle} of {last_cycle}")
+        st.subheader(f"Engine {engine_id}, cycle {cycle} of {last_cycle}", anchor=False)
         if label:
             st.badge(label, color=STATUS_COLORS[label])
     st.progress(cycle / last_cycle)
