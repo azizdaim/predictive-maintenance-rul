@@ -4,6 +4,12 @@
 // Bands hidden by the legend, kept per mounted map across reruns
 const hiddenBands = new WeakMap();
 
+// After a tile is clicked, ignore further clicks while the engine page loads.
+// On a slow connection a double click's second click would otherwise reach the
+// server after it already switched pages and send the visitor back here.
+const CLICK_COOLDOWN_MS = 2000;
+const lastClick = new WeakMap();
+
 export default function (component) {
   const { data, parentElement, setTriggerValue } = component;
   const legend = parentElement.querySelector(".legend");
@@ -49,7 +55,12 @@ export default function (component) {
         "aria-label",
         `Engine ${tile.engine}, ${tile.status}, ${tile.rul} cycles left`,
       );
-      button.onclick = () => setTriggerValue("clicked", tile.engine);
+      button.onclick = () => {
+        const now = Date.now();
+        if (now - (lastClick.get(parentElement) || 0) < CLICK_COOLDOWN_MS) return;
+        lastClick.set(parentElement, now);
+        setTriggerValue("clicked", tile.engine);
+      };
       return button;
     }),
   );
