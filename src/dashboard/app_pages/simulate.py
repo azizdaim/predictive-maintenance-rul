@@ -12,6 +12,7 @@ from src.dashboard.client import (
     health_status,
 )
 from src.dashboard.components.engine3d import engine_3d
+from src.dashboard.components.status import status_pill
 from src.dashboard.data import get_test_engines, get_true_rul, show_api_error
 from src.dashboard.palette import CYAN
 
@@ -129,7 +130,7 @@ def live_view() -> None:
     with st.container(horizontal=True, vertical_alignment="center"):
         st.subheader(f"Engine {engine_id}, cycle {cycle} of {last_cycle}", anchor=False)
         if label:
-            st.badge(label, color=STATUS_COLORS[label])
+            status_pill(label)
     st.progress(cycle / last_cycle)
 
     view, readout = st.columns([3, 2])

@@ -8,7 +8,7 @@ st.echarts_chart, which animates between values when the data changes.
 import pandas as pd
 
 from src.dashboard.client import REPLACE_SOON_BELOW, RUL_CAP, STATUS_HEX, WATCH_BELOW
-from src.dashboard.palette import BEZEL, BLACK, MAGENTA, MUTED, WHITE
+from src.dashboard.palette import BEZEL, BLACK, MUTED, WHITE
 
 _MUTED = MUTED
 _GRID = BEZEL
@@ -201,7 +201,8 @@ def section_importance_chart(ablation: pd.DataFrame) -> dict:
             {
                 "type": "bar",
                 "encode": {"x": "rmse_change", "y": "section"},
-                "itemStyle": {"color": MAGENTA},
+                # Measurements, not predictions, so not magenta
+                "itemStyle": {"color": WHITE, "opacity": 0.7},
                 "barWidth": "55%",
                 "label": {
                     "show": True,

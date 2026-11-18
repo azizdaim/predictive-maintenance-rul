@@ -1,6 +1,7 @@
 """About: how the project is built, what the experiments showed, and its limits."""
 
 import httpx
+import pandas as pd
 import streamlit as st
 
 from src.dashboard.charts import section_importance_chart
@@ -12,6 +13,7 @@ KEY_FINDINGS = ""
 
 REPO_URL = "https://github.com/azizdaim/predictive-maintenance-rul"
 
+metrics = None
 try:
     metrics = get_model_info()["metrics"]
     model_scores = (
@@ -61,13 +63,42 @@ PROSE_WIDTH = 720
 st.markdown(
     width=PROSE_WIDTH,
     body="Air moves through a turbofan in five stages, and data moves through this "
-    "project in five matching ones. Hover a stage to follow it.",
+    "project in five matching ones. Hover or tab to a stage to follow it. "
+    "Remaining life is counted in cycles, and one cycle is one flight, from "
+    "take-off to landing.",
 )
 
 gas_path(STAGES)
 
 st.space("medium")
 st.header("What the experiments showed", anchor=False)
+
+if metrics:
+    st.table(
+        pd.DataFrame(
+            {
+                "Measured on": [
+                    "NASA's 100 test engines",
+                    "Training engines, cross-validated",
+                    "Engines close to failure",
+                ],
+                "Typical error": [
+                    f"{metrics['test_rmse']:.1f} cycles",
+                    f"{metrics['cv_rmse_mean']:.1f} ± {metrics['cv_rmse_std']:.1f} "
+                    "cycles",
+                    f"{metrics['cv_near_failure_rmse_mean']:.1f} cycles",
+                ],
+                "What it means": [
+                    "How far off the model is on engines it never saw",
+                    "The same, averaged over 5 held-out groups of training engines",
+                    "Accuracy when fewer than 50 cycles remain, where it matters most",
+                ],
+            }
+        ),
+        hide_index=True,
+        alt="Model error in cycles on test engines, in cross-validation, and near "
+        "failure",
+    )
 
 findings, chart = st.columns([1, 1], gap="large")
 with findings:

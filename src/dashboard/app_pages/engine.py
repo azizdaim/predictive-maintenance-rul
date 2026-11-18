@@ -12,6 +12,7 @@ from src.dashboard.client import (
     health_status,
 )
 from src.dashboard.components.engine3d import engine_3d
+from src.dashboard.components.status import status_pill
 from src.dashboard.data import (
     get_predictions,
     get_test_engines,
@@ -64,11 +65,11 @@ engine = predictions.merge(
 current = engine[engine["cycle"] == cycle].iloc[0]
 predicted = float(current["predicted_rul"])
 actual = float(current["true_rul"])
-label, color = health_status(predicted)
+label, _ = health_status(predicted)
 
 with st.container(horizontal=True, vertical_alignment="center"):
     st.subheader(f"Engine {engine_id} at cycle {cycle}", anchor=False)
-    st.badge(label, color=color)
+    status_pill(label)
 
 # Closer to failure: the core glows harder and the rotors slow down
 wear = 1 - min(predicted, RUL_CAP) / RUL_CAP

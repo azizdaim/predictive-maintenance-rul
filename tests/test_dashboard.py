@@ -112,14 +112,15 @@ def test_fleet_table_ranks_most_urgent_first() -> None:
 
 @pytest.mark.usefixtures("api_through_httpx")
 def test_home_page_shows_live_results() -> None:
-    """Verify the landing page shows saved model results and fleet numbers."""
+    """Verify the landing page shows the error, fleet status, and urgent engine."""
     at = AppTest.from_file(APP_PATH, default_timeout=60).run()
 
     assert not at.exception
-    metrics = {m.label: m.value for m in at.metric}
-    assert metrics["Test error (RMSE)"] == "13.2 cycles"
-    assert metrics["Engines monitored"] == "100"
-    assert metrics["Cross-validated RMSE"] == "12.0 ± 0.5"
+    text = " ".join(m.value for m in at.markdown)
+    assert "within about 13 flights" in text  # test RMSE 13.22, rounded
+    assert "of 100 monitored engines need replacing soon" in text
+    # The hero engine is the most urgent one, with a button to open it
+    assert any(b.label.startswith("Inspect engine ") for b in at.button)
 
 
 @pytest.mark.usefixtures("api_through_httpx")
@@ -207,3 +208,22 @@ def test_dashboard_explains_when_api_is_down(monkeypatch: pytest.MonkeyPatch) ->
     assert not at.exception
     assert len(at.error) == 1
     assert "uvicorn src.api.main:app" in at.error[0].value
+
+
+@pytest.mark.parametrize(
+    ("embedded", "expected"),
+    [("1", "temporarily unavailable"), ("0", "uvicorn src.api.main:app")],
+)
+def test_api_message_suits_visitors_on_the_hosted_site(
+    monkeypatch: pytest.MonkeyPatch, embedded: str, expected: str
+) -> None:
+    """Verify visitors get a plain message and developers get the start command."""
+    from src.dashboard.data import api_unavailable_message
+
+    monkeypatch.setenv("RUL_EMBEDDED_API", embedded)
+
+    message = api_unavailable_message()
+
+    assert expected in message
+    if embedded == "1":
+        assert "uvicorn" not in message

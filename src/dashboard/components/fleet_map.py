@@ -79,9 +79,16 @@ def fleet_map(
             "tiles": tiles,
             "columns": columns,
             "bands": [
-                {"status": status, "label": label, "color": STATUS_HEX[status]}
+                {
+                    "status": status,
+                    "label": label,
+                    "color": STATUS_HEX[status],
+                    "css": status.split()[0].lower(),  # healthy, watch, replace
+                }
                 for status, label in BANDS
             ],
+            # Healthy outlines are dimmed: normal is the quietest state
+            "healthyDim": STATUS_HEX["Healthy"] + "73",
         },
         key=key,
         on_clicked_change=on_click,

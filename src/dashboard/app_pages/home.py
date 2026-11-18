@@ -1,42 +1,33 @@
-"""Landing page: what the project does, the 3D engine, and headline results.
+"""Landing page: what the project does, shown on the fleet's most urgent engine.
 
-The hero renders first and live numbers fill in afterwards, so visitors never
-stare at a spinner while all 100 engines are scored.
+The headline and pitch render first; the hero engine, the fleet status line, and
+the error figure fill in once the fleet is scored, so visitors never stare at an
+empty page. Detailed model scores live on the How it works page.
 """
 
 import httpx
 import streamlit as st
 
+from src.dashboard.client import STATUS_HEX
 from src.dashboard.components.engine3d import engine_3d
-from src.dashboard.data import get_fleet, get_model_info
+from src.dashboard.data import api_unavailable_message, get_fleet, get_model_info
+from src.dashboard.palette import MUTED
 
 hero_text, hero_engine = st.columns([1, 1.15], gap="large", vertical_alignment="center")
 
 with hero_text:
     st.title("Know how long an engine has left, before it fails", anchor=False)
-    st.markdown(
-        "A machine learning system that reads an engine's sensor history and "
-        "predicts its **remaining useful life**, in flight cycles. It runs end to "
-        "end: a tested model, a FastAPI prediction service, and this live dashboard."
-    )
-    kpi_row = st.container(horizontal=True)
-
-    with st.container(horizontal=True):
-        if st.button(
-            "Open fleet overview", icon=":material/dashboard:", type="primary"
-        ):
-            st.switch_page("app_pages/fleet.py")
-        if st.button("Inspect an engine", icon=":material/monitoring:"):
-            st.switch_page("app_pages/engine.py")
-    api_notice = st.container()
-
-with hero_engine:
-    engine_3d(
-        fan_speed=0.7,
-        glow=0.55,
-        height=460,
-        key="hero_engine",
-    )
+    # Replaced with the measured error once the model's scores have loaded
+    pitch = st.empty()
+    pitch.markdown("Predicts how many flights an engine has left before it fails.")
+    fleet_status = st.container()
+    if st.button(
+        "Open fleet overview",
+        icon=":material/dashboard:",
+        type="primary",
+        key="open_fleet",
+    ):
+        st.switch_page("app_pages/fleet.py")
 
 st.space("medium")
 with st.container(horizontal=True, vertical_alignment="center"):
@@ -47,59 +38,44 @@ with st.container(horizontal=True, vertical_alignment="center"):
     if st.button("See how it works", icon=":material/info:"):
         st.switch_page("app_pages/about.py")
 
-results = st.container()
+# Slow work last: the text above is already visible while the fleet is scored
+with hero_engine:
+    try:
+        with st.spinner("Scoring the fleet..."):
+            info = get_model_info()
+            fleet = get_fleet()
+    except httpx.HTTPError:
+        # Grey is the honest "no data" state: no warning colour, nothing to press
+        engine_3d(status_color=MUTED, fan_speed=0.2, glow=0.1, height=460)
+        with hero_text:
+            st.info(api_unavailable_message(), icon=":material/cloud_off:")
+        st.stop()
 
-# Slow work last: the page above is already visible while this loads
-try:
-    info = get_model_info()
-    fleet = get_fleet()
-except httpx.HTTPError:
-    with api_notice:
-        st.info(
-            "Start the prediction API with `uvicorn src.api.main:app` to see live "
-            "fleet numbers.",
-            icon=":material/cloud_off:",
-        )
-    st.stop()
-
-with kpi_row:
-    st.metric(
-        "Test error (RMSE)",
-        f"{info['metrics']['test_rmse']:.1f} cycles",
-        border=True,
-        help="Average error on NASA's 100 unseen test engines, with labels capped "
-        "at 125 cycles.",
+    urgent = fleet.iloc[0]  # the fleet table is sorted by predicted RUL, lowest first
+    urgent_id, urgent_rul = int(urgent["engine_id"]), round(urgent["predicted_rul"])
+    wear = 1 - min(urgent_rul, 125) / 125
+    engine_3d(
+        status_color=STATUS_HEX[urgent["status"]],
+        fan_speed=0.8 - 0.6 * wear,
+        glow=0.25 + 0.75 * wear,
+        height=460,
+        key="hero_engine",
     )
-    st.metric("Engines monitored", f"{len(fleet)}", border=True)
-    st.metric(
-        "Need attention",
-        f"{int((fleet['status'] != 'Healthy').sum())}",
-        border=True,
-        help="Engines predicted to have fewer than 60 cycles left.",
-    )
+    with st.container(horizontal=True, vertical_alignment="center"):
+        st.markdown(f"Most urgent: engine {urgent_id}, {urgent_rul} cycles left")
+        st.space("stretch")
+        if st.button(f"Inspect engine {urgent_id}", icon=":material/monitoring:"):
+            st.session_state.engine_id = urgent_id
+            st.switch_page("app_pages/engine.py")
 
-with results:
-    st.space("medium")
-    st.subheader("Model results", anchor=False)
-    m = info["metrics"]
-    with st.container(horizontal=True):
-        st.metric(
-            "Cross-validated RMSE",
-            f"{m['cv_rmse_mean']:.1f} ± {m['cv_rmse_std']:.1f}",
-            border=True,
-            help="Mean and spread across 5 folds of training engines.",
-        )
-        st.metric(
-            "Near-failure RMSE",
-            f"{m['cv_near_failure_rmse_mean']:.1f} cycles",
-            border=True,
-            help="Error on cycles with under 50 cycles left, where accuracy "
-            "matters most.",
-        )
-        st.metric(
-            "Test RMSE, raw labels",
-            f"{m['test_rmse_raw']:.1f} cycles",
-            border=True,
-            help="Test error without capping the true RUL at 125.",
-        )
-        st.metric("Features", f"{info['n_features']}", border=True)
+pitch.markdown(
+    "Predicts how many flights an engine has left before it fails, typically "
+    f"within about {info['metrics']['test_rmse']:.0f} flights on engines it has "
+    "never seen."
+)
+replace_soon = int((fleet["status"] == "Replace soon").sum())
+with fleet_status:
+    st.markdown(
+        f":red[**{replace_soon}**] of {len(fleet)} monitored engines need "
+        "replacing soon."
+    )
