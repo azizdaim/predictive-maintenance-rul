@@ -199,9 +199,6 @@ def fleet_map(fleet: pd.DataFrame, by_urgency: bool = False, columns: int = 10) 
 
     return {
         "dataset": {"source": tiles},
-        "tooltip": {
-            "formatter": "Engine {@engine_id}<br/>{@predicted_rul} cycles left"
-        },
         "grid": {"left": 4, "right": 4, "top": 44, "bottom": 4},
         "xAxis": {
             "type": "category",
@@ -227,7 +224,15 @@ def fleet_map(fleet: pd.DataFrame, by_urgency: bool = False, columns: int = 10) 
         "series": [
             {
                 "type": "heatmap",
-                "encode": {"x": "column", "y": "row", "value": "predicted_rul"},
+                # Name each tile after its engine. Without a name, ECharts names
+                # tiles after their column, so selecting one tile selected the
+                # whole column.
+                "encode": {
+                    "x": "column",
+                    "y": "row",
+                    "value": "predicted_rul",
+                    "itemName": "engine_id",
+                },
                 "selectedMode": "single",
                 "label": {
                     "show": True,
