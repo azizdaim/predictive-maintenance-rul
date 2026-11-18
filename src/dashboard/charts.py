@@ -84,6 +84,9 @@ def rul_gauge(predicted_rul: float) -> dict:
                     "fontWeight": 600,
                 },
                 "data": [{"value": round(predicted_rul), "name": "cycles left"}],
+                # Show the value at once when the gauge first appears, instead of
+                # sweeping up from zero; animate only when the value changes
+                "animationDuration": 0,
                 "animationDurationUpdate": 600,
             }
         ]
