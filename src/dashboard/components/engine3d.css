@@ -1,5 +1,10 @@
+/* The component's own box never scrolls; the view inside always fits it */
+:host { display: block; overflow: hidden; }
 .engine-root {
   position: relative;
+  /* Count the border inside the set width and height, so the view is exactly
+     the component's size instead of 2px larger, which caused scrollbars */
+  box-sizing: border-box;
   width: 100%;
   border-radius: var(--st-base-radius);
   overflow: hidden;
