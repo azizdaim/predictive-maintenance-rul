@@ -9,11 +9,13 @@ on:
 
 jobs:
   visit:
-    runs-on: ubuntu-latest
+    # Pinned: Playwright installs browser libraries per Ubuntu release, and
+    # ubuntu-latest moved to a release it does not support yet
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
