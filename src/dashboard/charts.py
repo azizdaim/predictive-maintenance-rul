@@ -13,9 +13,6 @@ from src.dashboard.palette import BEZEL, BLACK, MAGENTA, MUTED, WHITE
 _MUTED = MUTED
 _GRID = BEZEL
 
-# Health bands from most to least urgent, matching the order of their RUL ranges
-SEVERITY_ORDER = ("Replace soon", "Watch", "Healthy")
-
 
 def _band(status: str, low: float, high: float, opacity: float) -> list[dict]:
     """Shade the RUL range of one health band in its status color, with a label."""
@@ -166,88 +163,6 @@ def rul_history_chart(
                 "showSymbol": False,
                 "lineStyle": {"width": 2, "type": "dashed"},
             },
-        ],
-    }
-
-
-def fleet_map(fleet: pd.DataFrame, by_urgency: bool = False, columns: int = 10) -> dict:
-    """Build a grid of clickable tiles, one per engine, colored by health band.
-
-    Args:
-        fleet: One row per engine with 'engine_id' and 'predicted_rul'.
-        by_urgency: Place the lowest predicted RUL first instead of engine order.
-        columns: Tiles per row.
-
-    Returns:
-        dict: ECharts heatmap option. Row i of dataset.source is tile i, so a
-            clicked tile's data index looks up its engine there.
-    """
-    order = "predicted_rul" if by_urgency else "engine_id"
-    tiles = fleet.sort_values(order, ignore_index=True)[["engine_id", "predicted_rul"]]
-    tiles["predicted_rul"] = tiles["predicted_rul"].round().astype(int)
-    tiles.insert(0, "column", (tiles.index % columns).astype(str))
-    tiles.insert(1, "row", (tiles.index // columns).astype(str))
-    n_rows = -(-len(tiles) // columns)  # ceiling division
-
-    pieces = [
-        {"lt": REPLACE_SOON_BELOW, "label": f"Replace soon (<{REPLACE_SOON_BELOW})"},
-        {"gte": REPLACE_SOON_BELOW, "lt": WATCH_BELOW, "label": "Watch"},
-        {"gte": WATCH_BELOW, "label": f"Healthy ({WATCH_BELOW}+)"},
-    ]
-    for piece, status in zip(pieces, SEVERITY_ORDER, strict=True):
-        piece["color"] = STATUS_HEX[status]
-
-    return {
-        "dataset": {"source": tiles},
-        "grid": {"left": 4, "right": 4, "top": 44, "bottom": 4},
-        "xAxis": {
-            "type": "category",
-            "data": [str(i) for i in range(columns)],
-            "show": False,
-        },
-        "yAxis": {
-            "type": "category",
-            "data": [str(i) for i in range(n_rows)],
-            "inverse": True,
-            "show": False,
-        },
-        "visualMap": {
-            "type": "piecewise",
-            "dimension": 3,  # predicted_rul
-            "pieces": pieces,
-            "orient": "horizontal",
-            "itemGap": 24,
-            "top": 0,
-            "left": "center",
-            "textStyle": {"color": _MUTED},
-        },
-        "series": [
-            {
-                "type": "heatmap",
-                # Name each tile after its engine. Without a name, ECharts names
-                # tiles after their column, so selecting one tile selected the
-                # whole column.
-                "encode": {
-                    "x": "column",
-                    "y": "row",
-                    "value": "predicted_rul",
-                    "itemName": "engine_id",
-                },
-                "selectedMode": "single",
-                "label": {
-                    "show": True,
-                    "formatter": "{@engine_id}",
-                    "color": BLACK,
-                    "fontWeight": 600,
-                },
-                "itemStyle": {
-                    "borderColor": BLACK,
-                    "borderWidth": 3,
-                    "borderRadius": 6,
-                },
-                "emphasis": {"itemStyle": {"borderColor": WHITE}},
-                "select": {"itemStyle": {"borderColor": WHITE}},
-            }
         ],
     }
 

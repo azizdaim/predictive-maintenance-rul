@@ -3,13 +3,13 @@
 import httpx
 import streamlit as st
 
-from src.dashboard.charts import fleet_map
 from src.dashboard.client import (
     REPLACE_SOON_BELOW,
     RUL_CAP,
     STATUS_COLORS,
     WATCH_BELOW,
 )
+from src.dashboard.components.fleet_map import fleet_map, fleet_tiles
 from src.dashboard.data import get_fleet, show_api_error
 
 BAND_HELP = {
@@ -27,6 +27,13 @@ try:
     fleet = get_fleet()
 except httpx.HTTPError:
     show_api_error()
+
+# A click on a tile or a table row is recorded by a callback, which runs before
+# the page reruns. A quick second click deselects it again, but cannot undo the
+# recorded engine, so a double click still opens it.
+if "open_engine" in st.session_state:
+    st.session_state.engine_id = st.session_state.pop("open_engine")
+    st.switch_page("app_pages/engine.py")
 
 counts = fleet["status"].value_counts()
 with st.container(horizontal=True):
@@ -47,25 +54,18 @@ with st.container(border=True):
             label_visibility="collapsed",
             key="map_order",
         )
-    tile_map = fleet_map(fleet, by_urgency=arrangement == "Urgency")
-    clicked = st.echarts_chart(
-        tile_map,
-        height=480,
-        key="fleet_map",
-        on_select="rerun",
-        alt="Grid of the 100 test engines colored by health band",
+
+    def open_clicked_tile() -> None:
+        """Remember the clicked tile's engine as soon as the click arrives."""
+        st.session_state.open_engine = st.session_state.fleet_map.clicked
+
+    fleet_map(
+        fleet_tiles(fleet, by_urgency=arrangement == "Urgency"),
+        on_click=open_clicked_tile,
     )
     st.caption(
-        "Click a tile to open that engine. Click a band in the legend to hide it."
+        "Click a tile to open that engine. Click a band above the map to hide it."
     )
-
-tile_indices = [
-    i for group in clicked.selection.selected for i in group["data_indices"]
-]
-if tile_indices:
-    tiles = tile_map["dataset"]["source"]
-    st.session_state.engine_id = int(tiles.loc[tile_indices[0], "engine_id"])
-    st.switch_page("app_pages/engine.py")
 
 table = fleet.assign(status=fleet["status"].map(lambda s: [s]))
 
@@ -80,7 +80,15 @@ with st.container(border=True):
         " top: 0; left: 0; right: 0; height: 36px; z-index: 5; cursor: default; }"
         "</style>"
     )
-    event = st.dataframe(
+
+    def open_clicked_row() -> None:
+        """Remember the clicked row's engine as soon as the click arrives."""
+        cells = st.session_state.fleet_table.selection.cells
+        if cells:
+            row, _ = cells[0]  # each cell is a (row position, column name) pair
+            st.session_state.open_engine = int(fleet["engine_id"].iloc[row])
+
+    st.dataframe(
         table,
         column_config={
             "engine_id": st.column_config.NumberColumn("Engine", format="%d"),
@@ -101,7 +109,7 @@ with st.container(border=True):
             ),
         },
         hide_index=True,
-        on_select="rerun",
+        on_select=open_clicked_row,
         # Single-cell selection: clicking anywhere in a row opens that engine,
         # without the checkbox column that row selection adds
         selection_mode="single-cell",
@@ -109,9 +117,3 @@ with st.container(border=True):
         alt="Test engines sorted from least to most predicted remaining life",
     )
     st.caption("Click an engine to open its detail page.")
-
-# Each selected cell is a (row position, column name) pair; the row is enough
-if event.selection.cells:
-    row, _ = event.selection.cells[0]
-    st.session_state.engine_id = int(fleet["engine_id"].iloc[row])
-    st.switch_page("app_pages/engine.py")

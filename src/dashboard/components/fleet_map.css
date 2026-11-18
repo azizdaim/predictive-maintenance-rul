@@ -1,0 +1,32 @@
+:host { display: block; }
+.fleet-map { font-family: var(--st-font); color: var(--st-text-color); }
+
+/* Legend: one toggle per health band, centered above the grid */
+.legend {
+  display: flex; justify-content: center; flex-wrap: wrap;
+  gap: 8px 24px; margin-bottom: 16px;
+}
+.band {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 6px; border: 0; border-radius: 4px; background: none;
+  color: inherit; font: inherit; font-size: 0.8rem; cursor: pointer;
+}
+.band .swatch { width: 20px; height: 13px; border-radius: 3px; }
+.band[aria-pressed="false"] { opacity: 0.4; }
+.band[aria-pressed="false"] .swatch { background: var(--st-border-color) !important; }
+
+/* Tiles: one button per engine */
+.grid { display: grid; gap: 4px; }
+.tile {
+  height: 42px; border: 0; border-radius: 6px;
+  color: #000; font: 700 0.8rem var(--st-font); cursor: pointer;
+  outline: 2px solid transparent; outline-offset: -2px;
+}
+.tile:hover { outline-color: var(--st-text-color); }
+.tile:focus-visible { outline: 3px solid var(--st-primary-color); outline-offset: 1px; }
+/* A hidden band keeps its place in the grid so the other tiles do not move */
+.tile[hidden] { display: block; visibility: hidden; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .tile, .band { transition: outline-color 120ms ease-out, opacity 120ms ease-out; }
+}
