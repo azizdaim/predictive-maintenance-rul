@@ -71,6 +71,15 @@ table = fleet.assign(status=fleet["status"].map(lambda s: [s]))
 
 with st.container(border=True):
     st.markdown("**Engines by predicted remaining life**")
+    # Lock the header: an invisible cover over the header row stops visitors
+    # sorting, reordering, resizing, or hiding columns, which st.dataframe has
+    # no setting for. Rows below still scroll and open an engine on click.
+    st.html(
+        "<style>.st-key-fleet_table .stDataFrame { position: relative; }"
+        ".st-key-fleet_table .stDataFrame::after { content: ''; position: absolute;"
+        " top: 0; left: 0; right: 0; height: 36px; z-index: 5; cursor: default; }"
+        "</style>"
+    )
     event = st.dataframe(
         table,
         column_config={
@@ -96,6 +105,7 @@ with st.container(border=True):
         # Single-cell selection: clicking anywhere in a row opens that engine,
         # without the checkbox column that row selection adds
         selection_mode="single-cell",
+        key="fleet_table",
         alt="Test engines sorted from least to most predicted remaining life",
     )
     st.caption("Click an engine to open its detail page.")
