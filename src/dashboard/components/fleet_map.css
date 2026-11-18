@@ -1,6 +1,13 @@
 :host { display: block; }
 .fleet-map { font-family: var(--st-font); color: var(--st-text-color); }
 
+/* Cockpit alarm style: normal is quiet, warnings are loud.
+   Healthy = dim green outline, Watch = amber outline, Replace soon = solid red. */
+.tile, .band { --c: var(--st-text-color); }
+[data-status="Healthy"] { --c: var(--healthy); }
+[data-status="Watch"] { --c: var(--watch); }
+[data-status="Replace soon"] { --c: var(--replace); }
+
 /* Legend: one toggle per health band, centered above the grid */
 .legend {
   display: flex; justify-content: center; flex-wrap: wrap;
@@ -11,19 +18,33 @@
   padding: 4px 6px; border: 0; border-radius: 4px; background: none;
   color: inherit; font: inherit; font-size: 0.8rem; cursor: pointer;
 }
-.band .swatch { width: 20px; height: 13px; border-radius: 3px; }
+.band .swatch {
+  width: 20px; height: 13px; border-radius: 3px;
+  border: 1.5px solid var(--c); box-sizing: border-box;
+}
+.band[data-status="Healthy"] .swatch { border-color: var(--healthy-dim); }
+.band[data-status="Replace soon"] .swatch { background: var(--c); }
 .band[aria-pressed="false"] { opacity: 0.4; }
-.band[aria-pressed="false"] .swatch { background: var(--st-border-color) !important; }
+.band:focus-visible { outline: 2px solid var(--st-primary-color); outline-offset: 2px; }
 
-/* Tiles: one button per engine */
+/* Tiles: one button per engine, engine number small, remaining life large */
 .grid { display: grid; gap: 4px; }
 .tile {
-  height: 42px; border: 0; border-radius: 6px;
-  color: #000; font: 700 0.8rem var(--st-font); cursor: pointer;
-  outline: 2px solid transparent; outline-offset: -2px;
+  position: relative; height: 48px; padding: 0;
+  border-radius: 6px; border: 1.5px solid var(--c); box-sizing: border-box;
+  background: transparent; color: var(--c); cursor: pointer;
+  font-family: var(--st-font); font-variant-numeric: tabular-nums;
+  outline: 2px solid transparent; outline-offset: 1px;
 }
+.tile[data-status="Healthy"] { border-color: var(--healthy-dim); }
+.tile[data-status="Replace soon"] { background: var(--c); color: #000; }
+.tile .engine {
+  position: absolute; top: 3px; left: 6px;
+  font-size: 0.65rem; font-weight: 400; opacity: 0.8;
+}
+.tile .rul { font-size: 1rem; font-weight: 700; }
 .tile:hover { outline-color: var(--st-text-color); }
-.tile:focus-visible { outline: 3px solid var(--st-primary-color); outline-offset: 1px; }
+.tile:focus-visible { outline: 3px solid var(--st-primary-color); }
 /* A hidden band keeps its place in the grid so the other tiles do not move */
 .tile[hidden] { display: block; visibility: hidden; }
 

@@ -11,6 +11,7 @@ from src.dashboard.client import (
     load_test_engines,
     true_rul_by_cycle,
 )
+from src.dashboard.embedded_api import embedded_api_enabled
 from src.data.loader import PROJECT_ROOT
 
 # Written by python -m src.models.ablation and committed with the code
@@ -49,12 +50,26 @@ def get_fleet() -> pd.DataFrame:
     return fleet_table({int(e): get_predictions(int(e)) for e in engine_ids})
 
 
-def show_api_error() -> None:
-    """Explain how to start the API, then stop the page."""
-    st.error(
+def api_unavailable_message() -> str:
+    """Explain a missing prediction service to whoever is looking.
+
+    On the hosted site, where the API runs inside the app, visitors cannot fix
+    anything, so they get a plain message. Locally, the developer gets the
+    command that starts the API.
+    """
+    if embedded_api_enabled():
+        return "Live predictions are temporarily unavailable. Try again in a minute."
+    return (
         f"The dashboard gets its predictions from the FastAPI service at {API_URL}. "
-        "Start it in another terminal with `uvicorn src.api.main:app`, then refresh.",
-        title="Can't reach the prediction API",
+        "Start it in another terminal with `uvicorn src.api.main:app`, then refresh."
+    )
+
+
+def show_api_error() -> None:
+    """Explain that predictions are unavailable, then stop the page."""
+    st.error(
+        api_unavailable_message(),
+        title="Predictions unavailable",
         icon=":material/cloud_off:",
     )
     st.stop()

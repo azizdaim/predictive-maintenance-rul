@@ -15,6 +15,7 @@ from src.dashboard.embedded_api import (  # noqa: E402
     embedded_api_enabled,
     start_embedded_api,
 )
+from src.dashboard.palette import AMBER, BLACK, CYAN, GREEN, RED  # noqa: E402
 
 st.set_page_config(
     page_title="Turbofan engine health", page_icon=":material/flight:", layout="wide"
@@ -23,10 +24,32 @@ st.set_page_config(
 if embedded_api_enabled():
     start_embedded_api()
 
-# Hide the hover toolbar (show data, download, search, full screen) on every
-# chart and table: it adds nothing here and covers controls placed above an
-# element. Value tooltips on the charts themselves still work.
-st.html("<style>.stElementToolbar { display: none; }</style>")
+# Shared styles that the theme settings cannot express:
+# - no hover toolbar on charts and tables (it adds nothing and covers controls)
+# - black text on the cyan primary buttons (white on cyan fails contrast)
+# - a visible keyboard focus ring on the top navigation; Streamlit gives nav
+#   links no key, so its test id is the only selector
+# - text selection and table digits themed from the palette
+# - status pills in the cockpit alarm style (see components/status.py)
+st.html(
+    f"""<style>
+.stElementToolbar {{ display: none; }}
+.st-key-open_fleet button, .st-key-sim_play button {{ color: {BLACK}; }}
+.st-key-open_fleet button *, .st-key-sim_play button * {{ color: {BLACK}; }}
+[data-testid="stTopNavLink"]:focus-visible {{
+  outline: 2px solid {CYAN}; outline-offset: 2px;
+}}
+::selection {{ background: {CYAN}; color: {BLACK}; }}
+table, [data-testid="stMetricValue"] {{ font-variant-numeric: tabular-nums; }}
+.status-pill {{
+  display: inline-block; padding: 2px 10px; border-radius: 6px;
+  font: 700 0.85rem var(--st-font); border: 1px solid transparent;
+}}
+.status-healthy {{ color: {GREEN}; padding-left: 0; padding-right: 0; }}
+.status-watch {{ color: {AMBER}; border-color: {AMBER}; }}
+.status-replace {{ color: {BLACK}; background: {RED}; }}
+</style>"""
+)
 
 # Shared between pages: the fleet table sets it, the engine page reads it
 if "engine_id" not in st.session_state:

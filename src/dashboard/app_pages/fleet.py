@@ -20,7 +20,7 @@ BAND_HELP = {
 
 st.title("Fleet overview", icon=":material/dashboard:", anchor=False)
 st.caption(
-    "All 100 NASA C-MAPSS FD001 test engines, ranked by predicted remaining life."
+    "All 100 NASA C-MAPSS FD001 test engines, coloured by predicted remaining life."
 )
 
 try:
