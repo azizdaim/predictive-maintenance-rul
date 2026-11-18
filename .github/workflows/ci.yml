@@ -1,0 +1,29 @@
+# Lint and test every push and pull request, on the same Python and package
+# versions the deployed app runs.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-app.txt
+
+      # The app's pinned packages, plus the tools only tests and training use
+      - name: Install dependencies
+        run: pip install -r requirements-app.txt pytest==8.4.2 ruff==0.17.3 mlflow==2.22.5
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Test
+        run: pytest -q

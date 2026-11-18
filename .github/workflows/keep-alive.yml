@@ -1,0 +1,26 @@
+# Visit the live dashboard every 6 hours so Streamlit Community Cloud never
+# puts it to sleep (it sleeps after about 12 hours with no visitors).
+name: Keep app awake
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  visit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install a headless browser
+        run: |
+          pip install playwright==1.55.0
+          playwright install --with-deps chromium
+
+      - name: Visit the app
+        run: python scripts/keep_alive.py
