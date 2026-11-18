@@ -48,9 +48,6 @@ with st.container(border=True):
             key="map_order",
         )
     tile_map = fleet_map(fleet, by_urgency=arrangement == "Urgency")
-    # Hide this chart's hover toolbar (data, download, full screen): it adds
-    # nothing to a tile map and would cover the arrange toggle above it
-    st.html("<style>.st-key-fleet_map .stElementToolbar { display: none; }</style>")
     clicked = st.echarts_chart(
         tile_map,
         height=480,
