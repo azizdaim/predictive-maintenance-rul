@@ -26,6 +26,10 @@ st.caption(
     "and the model's prediction changed, cycle by cycle."
 )
 
+# Discard a fleet click recorded after the page had already switched here, so it
+# cannot send the visitor back to an engine the next time they open the fleet
+st.session_state.pop("open_engine", None)
+
 engines = get_test_engines()
 
 picker, timeline = st.columns([1, 3], vertical_alignment="bottom")

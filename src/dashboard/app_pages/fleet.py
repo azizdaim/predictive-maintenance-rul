@@ -29,10 +29,10 @@ except httpx.HTTPError:
     show_api_error()
 
 # A click on a tile or a table row is recorded by a callback, which runs before
-# the page reruns. A quick second click deselects it again, but cannot undo the
-# recorded engine, so a double click still opens it.
+# the page reruns. The record is read here but only cleared by the engine page
+# once it loads, so a second click that interrupts the switch cannot lose it.
 if "open_engine" in st.session_state:
-    st.session_state.engine_id = st.session_state.pop("open_engine")
+    st.session_state.engine_id = st.session_state.open_engine
     st.switch_page("app_pages/engine.py")
 
 counts = fleet["status"].value_counts()
@@ -56,8 +56,14 @@ with st.container(border=True):
         )
 
     def open_clicked_tile() -> None:
-        """Remember the clicked tile's engine as soon as the click arrives."""
-        st.session_state.open_engine = st.session_state.fleet_map.clicked
+        """Remember the clicked tile's engine as soon as the click arrives.
+
+        A second click can arrive after the page has already switched to the
+        engine, when the map no longer exists; that late click is ignored.
+        """
+        clicked = getattr(st.session_state.get("fleet_map"), "clicked", None)
+        if clicked is not None:
+            st.session_state.open_engine = clicked
 
     fleet_map(
         fleet_tiles(fleet, by_urgency=arrangement == "Urgency"),
@@ -82,8 +88,9 @@ with st.container(border=True):
     )
 
     def open_clicked_row() -> None:
-        """Remember the clicked row's engine as soon as the click arrives."""
-        cells = st.session_state.fleet_table.selection.cells
+        """Remember the clicked row's engine; a late click is ignored."""
+        table_state = st.session_state.get("fleet_table")
+        cells = getattr(getattr(table_state, "selection", None), "cells", None)
         if cells:
             row, _ = cells[0]  # each cell is a (row position, column name) pair
             st.session_state.open_engine = int(fleet["engine_id"].iloc[row])
