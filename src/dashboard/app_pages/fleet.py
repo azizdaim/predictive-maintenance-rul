@@ -96,11 +96,15 @@ with st.container(border=True):
         },
         hide_index=True,
         on_select="rerun",
-        selection_mode="single-row",
+        # Single-cell selection: clicking anywhere in a row opens that engine,
+        # without the checkbox column that row selection adds
+        selection_mode="single-cell",
         alt="Test engines sorted from least to most predicted remaining life",
     )
-    st.caption("Select a row to open that engine's detail page.")
+    st.caption("Click an engine to open its detail page.")
 
-if event.selection.rows:
-    st.session_state.engine_id = int(fleet.loc[event.selection.rows[0], "engine_id"])
+# Each selected cell is a (row position, column name) pair; the row is enough
+if event.selection.cells:
+    row, _ = event.selection.cells[0]
+    st.session_state.engine_id = int(fleet["engine_id"].iloc[row])
     st.switch_page("app_pages/engine.py")
