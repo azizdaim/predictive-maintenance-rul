@@ -23,13 +23,10 @@ st.set_page_config(
 if embedded_api_enabled():
     start_embedded_api()
 
-# Hide the hover toolbar (show data, download, full screen) on every chart: it
-# adds nothing here and covers controls placed above a chart. Value tooltips
-# on the charts themselves still work.
-st.html(
-    "<style>.stElementContainer:has(.stEChartsChart) .stElementToolbar"
-    " { display: none; }</style>"
-)
+# Hide the hover toolbar (show data, download, search, full screen) on every
+# chart and table: it adds nothing here and covers controls placed above an
+# element. Value tooltips on the charts themselves still work.
+st.html("<style>.stElementToolbar { display: none; }</style>")
 
 # Shared between pages: the fleet table sets it, the engine page reads it
 if "engine_id" not in st.session_state:
