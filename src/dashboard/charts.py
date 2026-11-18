@@ -14,7 +14,17 @@ from src.dashboard.client import (
     WATCH_BELOW,
     health_status,
 )
-from src.dashboard.palette import BEZEL, BLACK, MUTED, TRACK, WHITE
+from src.dashboard.palette import (
+    AMBER,
+    BEZEL,
+    BLACK,
+    GREEN_DIM,
+    MUTED,
+    RED,
+    TRACK,
+    WHITE,
+)
+from src.monitoring.drift import DRIFTED_FROM, WATCH_FROM
 
 _MUTED = MUTED
 _GRID = BEZEL
@@ -247,5 +257,134 @@ def section_importance_chart(ablation: pd.DataFrame) -> dict:
                     "color": MUTED,
                 },
             }
+        ],
+    }
+
+
+# Stable stays quiet, like a healthy engine; drift is loud
+DRIFT_HEX = {"Stable": GREEN_DIM, "Watch": AMBER, "Drifted": RED}
+
+
+def sensor_label(sensor: str, section: str) -> str:
+    """Name a sensor for people: "Sensor 11 (high-pressure compressor)"."""
+    return f"Sensor {sensor.removeprefix('sensor_')} ({section.lower()})"
+
+
+def drift_chart(sensors: pd.DataFrame) -> dict:
+    """Build a bar chart of each sensor's PSI against the drift thresholds.
+
+    Args:
+        sensors: Drift report rows with 'sensor', 'section', 'psi', 'status'.
+
+    Returns:
+        dict: ECharts option with one horizontal bar per sensor, the most
+            drifted at the top, and dashed lines at the watch and drift limits.
+    """
+    rows = sensors.iloc[::-1]
+    # Never shorter than the drift limit, so small scores look small
+    x_max = round(max(0.5, float(sensors["psi"].max()) * 1.15), 1)
+
+    def limit(value: float, name: str, color: str) -> dict:
+        return {
+            "xAxis": value,
+            "lineStyle": {"color": color, "type": "dashed"},
+            "label": {"formatter": name, "color": color, "position": "end"},
+        }
+
+    # On a wide scale the two limit lines nearly touch, so only Drift is named
+    watch_line = limit(WATCH_FROM, "Watch", AMBER)
+    watch_line["label"]["show"] = x_max <= 1
+
+    return {
+        "grid": {"left": 8, "right": 56, "top": 28, "bottom": 8, "containLabel": True},
+        "xAxis": {
+            "type": "value",
+            "min": 0,
+            "max": x_max,
+            "splitLine": {"lineStyle": {"color": _GRID}},
+            "axisLabel": {"color": _MUTED},
+        },
+        "yAxis": {
+            "type": "category",
+            # Short names keep the bars wide on phones; the dropdown gives sections
+            "data": [
+                f"Sensor {r.sensor.removeprefix('sensor_')}" for r in rows.itertuples()
+            ],
+            "axisTick": {"show": False},
+            "axisLine": {"show": False},
+            "axisLabel": {"color": WHITE},
+        },
+        "series": [
+            {
+                "type": "bar",
+                "silent": True,
+                "barWidth": "60%",
+                "data": [
+                    {
+                        "value": round(r.psi, 2),
+                        "itemStyle": {"color": DRIFT_HEX[r.status]},
+                    }
+                    for r in rows.itertuples()
+                ],
+                "label": {"show": True, "position": "right", "color": _MUTED},
+                "markLine": {
+                    "silent": True,
+                    "symbol": "none",
+                    "data": [
+                        watch_line,
+                        limit(DRIFTED_FROM, "Drift", RED),
+                    ],
+                },
+            }
+        ],
+    }
+
+
+def distribution_chart(reference_shares: list[float], new_shares: list[float]) -> dict:
+    """Build side-by-side bars of where training and new readings fall.
+
+    Args:
+        reference_shares: Share of training readings in each bucket.
+        new_shares: Share of the new fleet's readings in the same buckets.
+
+    Returns:
+        dict: ECharts option with one pair of bars per bucket, in percent.
+    """
+    buckets = [str(i) for i in range(1, len(reference_shares) + 1)]
+
+    def percent(values: list[float]) -> list[float]:
+        return [round(v * 100, 1) for v in values]
+
+    return {
+        "legend": {"top": 0, "right": 0, "textStyle": {"color": _MUTED}},
+        "grid": {"left": 48, "right": 16, "top": 36, "bottom": 48},
+        "xAxis": {
+            "type": "category",
+            "data": buckets,
+            "name": "Training range, lowest to highest",
+            "nameLocation": "middle",
+            "nameGap": 28,
+        },
+        "yAxis": {
+            "type": "value",
+            "name": "Share of readings (%)",
+            "min": 0,
+            "splitLine": {"lineStyle": {"color": _GRID}},
+        },
+        "series": [
+            {
+                "name": "Training engines",
+                "type": "bar",
+                "silent": True,
+                "data": percent(reference_shares),
+                "itemStyle": {"color": TRACK},
+            },
+            {
+                "name": "This fleet",
+                "type": "bar",
+                "silent": True,
+                "data": percent(new_shares),
+                "itemStyle": {"color": WHITE},
+            },
         ],
     }

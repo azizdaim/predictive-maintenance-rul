@@ -13,6 +13,13 @@ from pydantic import BaseModel, Field, model_validator
 
 from src.features.build_features import TREND_LAG, prepare_features
 from src.models.paths import MODEL_PATH, metrics_path_for
+from src.monitoring.drift import (
+    EARLY_LIFE_CYCLES,
+    compare_sensors,
+    early_life,
+    overall_status,
+    reference_readings,
+)
 
 app = FastAPI(title="Turbofan RUL API")
 
@@ -93,6 +100,32 @@ class ModelInfo(BaseModel):
     n_features: int
     n_train_engines: int
     trained_at: str
+
+
+class Fleet(BaseModel):
+    """Sensor histories from a batch of engines, to check for drift."""
+
+    engines: list[EngineHistory] = Field(min_length=1, max_length=500)
+
+
+class SensorDrift(BaseModel):
+    """How far one sensor's early-life readings moved from training."""
+
+    sensor: str
+    section: str
+    psi: float
+    status: str
+    reference_shares: list[float]
+    new_shares: list[float]
+
+
+class DriftReport(BaseModel):
+    """Drift of a fleet's early-life readings from the training engines."""
+
+    status: str
+    drifted_sensors: int
+    readings_compared: int
+    sensors: list[SensorDrift]
 
 
 @lru_cache
@@ -176,4 +209,26 @@ def predict_history(
             CyclePrediction(cycle=reading.cycle, predicted_rul=round(float(rul), 2))
             for reading, rul in zip(history.cycles, predicted, strict=True)
         ]
+    )
+
+
+@app.post("/drift")
+def drift(fleet: Fleet) -> DriftReport:
+    """Check whether a fleet's sensors still look like the training data."""
+    raw = pd.DataFrame(
+        [reading.model_dump() for engine in fleet.engines for reading in engine.cycles]
+    )
+    new = early_life(raw)
+    if new.empty:
+        raise HTTPException(
+            status_code=422,
+            detail=f"No readings from the first {EARLY_LIFE_CYCLES} cycles to compare.",
+        )
+
+    sensors = compare_sensors(reference_readings(), new)
+    return DriftReport(
+        status=overall_status(sensors["status"]),
+        drifted_sensors=int((sensors["status"] == "Drifted").sum()),
+        readings_compared=len(new),
+        sensors=sensors.round({"psi": 3}).to_dict(orient="records"),
     )

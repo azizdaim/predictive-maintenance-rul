@@ -23,6 +23,9 @@ dashboard.
   flagged for watching with 59 cycles truly left and for replacement with 24.
 - **Half the features, same accuracy.** The ablation study showed 32 of the 62
   candidate features were redundant, so the served model uses the other 30.
+- **It can tell when new data does not fit.** A drift check raises no false
+  alarm on the training scenario and flags both of NASA's harder scenarios,
+  where the model's error rises from 13 to 22 and 45 cycles.
 
 ## How it works
 
@@ -31,7 +34,7 @@ flowchart LR
     A["NASA C-MAPSS<br/>21 sensors per cycle"] --> B["Features<br/>rolling averages and<br/>30-cycle trends"]
     B --> C["LightGBM model<br/>validated by engine,<br/>tracked in MLflow"]
     C --> D["FastAPI service<br/>validates input,<br/>rebuilds features"]
-    D --> E["Streamlit dashboard<br/>fleet map, engine detail,<br/>live replay"]
+    D --> E["Streamlit dashboard<br/>fleet map, engine detail,<br/>live replay, drift check"]
 ```
 
 1. **Data.** Each training engine runs from healthy to failure, logging 21
@@ -46,6 +49,8 @@ flowchart LR
    each other, so a row-level split would leak answers and flatter the scores.
 4. **API.** A FastAPI service checks each request with Pydantic, rebuilds the
    same features, and returns a prediction for the latest cycle or every cycle.
+   A drift endpoint checks whether a batch of engines still looks like the
+   training data.
 5. **Dashboard.** Every number on the dashboard comes from the API. Its look
    follows an aircraft engine-indication display: green, amber, and red for
    health, magenta for predictions, and Airbus's B612 cockpit typeface.
@@ -56,7 +61,7 @@ flowchart LR
 | Experiment tracking | MLflow |
 | Serving | FastAPI, Pydantic, Uvicorn |
 | Dashboard | Streamlit, ECharts, three.js (a 3D engine built in code) |
-| Quality and delivery | pytest (60 tests), Ruff, Docker |
+| Quality and delivery | pytest (78 tests, run by GitHub Actions on every push), Ruff, Docker |
 
 ## Results
 
@@ -124,6 +129,34 @@ A positive change means the model got worse without that group. Run it with
 | High-pressure turbine | 20 | +0.09 | +0.07 | 3 of 3 |
 
 </details>
+
+## Drift check
+
+A model fails quietly when new data stops looking like its training data: it
+keeps answering with the same confidence, only worse. NASA's other scenarios
+make good test fleets, so the served model was run on two of them.
+
+| Fleet | What changes | Sensors drifted | Model error (RMSE) |
+|-------|--------------|-----------------|--------------------|
+| FD001 test | Nothing, the training scenario | 0 of 14 | 13.1 cycles |
+| FD003 | A second fault type, fan wear | 7 of 14 | 22.5 cycles |
+| FD002 | Six operating conditions | 14 of 14 | 45.0 cycles |
+
+Each sensor gets a Population Stability Index (PSI): the training readings are
+split into ten buckets, and PSI measures how far a new fleet's share of each
+bucket has moved. Below 0.1 is stable and 0.25 or more is drifted.
+
+The first version raised a false alarm. Comparing every cycle flagged 8 of 15
+sensors on FD001's own test engines, because test engines stop partway through
+life and are healthier on average than training engines, which all run to
+failure. Wear looked like drift. Comparing only each engine's first 30 cycles,
+while it is still new, removed the false alarm, and the drift scores now rank
+the fleets in the same order as the model's error. On FD003, the sensor that
+moves most is a fan sensor, which matches its added fan fault.
+
+The errors come from `python -m src.monitoring.drift`, saved in
+[reports/drift_results.csv](reports/drift_results.csv); the dashboard's Drift
+check page runs the sensor comparison live through the API.
 
 ## Key findings
 
@@ -206,10 +239,13 @@ thread of the dashboard's process; the dashboard still calls it over HTTP.
 | `/predict` | POST | Predicts remaining life at an engine's latest cycle |
 | `/predict/history` | POST | Predicts remaining life at every cycle of an engine's history |
 | `/model/info` | GET | Returns how the served model scored when it was trained |
+| `/drift` | POST | Checks a batch of engines' early-life readings for drift from the training data |
 
 The prediction endpoints take a list of cycles, oldest first, each with the
 cycle number, 3 settings, and 21 sensors in the C-MAPSS format. Histories of 30
 cycles or fewer get a warning, because the trend features need a longer history.
+`/drift` takes a list of such engine histories and returns a PSI and status for
+each sensor.
 
 ## Project structure
 
@@ -219,13 +255,14 @@ cycles or fewer get a warning, because the trend features need a longer history.
 │   ├── features/        # Rolling and trend features, sensor-to-section mapping
 │   ├── models/          # Training, cross-validation, ablation study
 │   ├── evaluation/      # RMSE and NASA scoring
+│   ├── monitoring/      # Drift check: PSI on early-life sensor readings
 │   ├── api/             # FastAPI prediction service
 │   └── dashboard/       # Streamlit pages, charts, 3D engine, in-process API
 ├── tests/               # pytest suite
 ├── notebooks/           # Exploratory data analysis
-├── reports/             # Ablation study results
+├── reports/             # Ablation study and drift results
 ├── models/              # The served model and its scores
-├── data/raw/            # NASA data; only the two test files the dashboard reads are committed
+├── data/raw/            # NASA data; only the files the tests and dashboard read are committed
 ├── docs/                # README media
 ├── scripts/             # Starts the API and dashboard in the container
 ├── Dockerfile           # Trains the model, then runs the API and dashboard
@@ -235,13 +272,15 @@ cycles or fewer get a warning, because the trend features need a longer history.
 
 ## Limitations and next steps
 
-- **One simulated scenario.** The model is trained and tested on FD001: one
-  operating condition and one fault mode from NASA's simulator, not real flight
-  data. FD002 to FD004 add more conditions and fault modes.
+- **One simulated scenario.** The model is trained on FD001: one operating
+  condition and one fault mode from NASA's simulator, not real flight data. The
+  drift check catches the harder scenarios, but the model does not handle them;
+  that would need training on them, with features normalized per operating
+  condition.
 - **A slow start.** Trend features need more than 30 cycles of history, so
   predictions for very young engines are less reliable, and the app says so.
-- **Next:** drift monitoring with Evidently, to detect when incoming sensor data
-  stops looking like the training data, and CI with GitHub Actions.
+- **Drift is checked, not watched.** The drift check runs on demand for a
+  batch of engines; a production system would run it on a schedule and alert.
 
 ## Data and license
 

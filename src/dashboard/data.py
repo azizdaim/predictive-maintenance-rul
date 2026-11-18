@@ -5,6 +5,7 @@ import streamlit as st
 
 from src.dashboard.client import (
     API_URL,
+    fetch_drift,
     fetch_history_predictions,
     fetch_model_info,
     fleet_table,
@@ -12,7 +13,8 @@ from src.dashboard.client import (
     true_rul_by_cycle,
 )
 from src.dashboard.embedded_api import embedded_api_enabled
-from src.data.loader import PROJECT_ROOT
+from src.data.loader import PROJECT_ROOT, load_data
+from src.monitoring.drift import RESULTS_PATH
 
 # Written by python -m src.models.ablation and committed with the code
 ABLATION_REPORT = PROJECT_ROOT / "reports" / "ablation_results.csv"
@@ -79,3 +81,15 @@ def show_api_error() -> None:
 def get_ablation_results() -> pd.DataFrame:
     """Load the saved ablation study results."""
     return pd.read_csv(ABLATION_REPORT)
+
+
+@st.cache_data(ttl="10m", show_spinner="Comparing sensors with the training engines...")
+def get_drift(fleet: str) -> dict:
+    """Check one NASA fleet's test engines for drift through the API."""
+    return fetch_drift(load_data(f"test_{fleet}.txt"))
+
+
+@st.cache_data
+def get_drift_results() -> pd.DataFrame:
+    """Load the model's saved error on each fleet, indexed by fleet."""
+    return pd.read_csv(RESULTS_PATH, index_col="fleet")

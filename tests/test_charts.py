@@ -63,3 +63,26 @@ def test_section_chart_sorts_engine_sections_by_importance() -> None:
 
     assert source["section"].tolist() == ["Combustor", "Fan"]
     assert source["rmse_change"].tolist() == [0.38, 0.63]
+
+
+def test_drift_chart_puts_the_most_drifted_sensor_on_top() -> None:
+    """Verify bars are coloured by status and the biggest PSI is drawn last."""
+    from src.dashboard.charts import DRIFT_HEX, drift_chart
+
+    sensors = pd.DataFrame(
+        {
+            "sensor": ["sensor_11", "sensor_4"],
+            "section": ["High-pressure compressor", "Low-pressure turbine"],
+            "psi": [0.4, 0.02],
+            "status": ["Drifted", "Stable"],
+        }
+    )
+
+    option = drift_chart(sensors)
+
+    labels = option["yAxis"]["data"]
+    bars = option["series"][0]["data"]
+    assert labels[-1] == "Sensor 11"
+    assert bars[-1]["itemStyle"]["color"] == DRIFT_HEX["Drifted"]
+    assert bars[0]["itemStyle"]["color"] == DRIFT_HEX["Stable"]
+    assert option["xAxis"]["max"] == 0.5

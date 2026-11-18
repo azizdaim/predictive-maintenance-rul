@@ -1,5 +1,5 @@
 # Lint and test every push and pull request, on the same Python and package
-# versions the deployed app runs.
+# versions the deployed app runs, and check the Docker image builds and runs.
 name: CI
 
 on:
@@ -27,3 +27,32 @@ jobs:
 
       - name: Test
         run: pytest -q
+
+  # Build the image from scratch (it downloads NASA's data and trains the
+  # model), start it, and check the dashboard and the API inside it respond
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the image
+        run: docker build -t turbofan .
+
+      - name: Start the container
+        run: docker run -d --name app -p 7860:7860 turbofan
+
+      - name: Check the dashboard and API respond
+        run: |
+          for _ in $(seq 1 60); do
+            curl -fs http://127.0.0.1:7860/_stcore/health && break
+            sleep 2
+          done
+          curl -fs http://127.0.0.1:7860/_stcore/health
+          docker exec app python -c "
+          from src.dashboard.client import fetch_drift
+          from src.data.loader import load_data
+          print(fetch_drift(load_data('test_FD002.txt'))['status'])"
+
+      - name: Show the container log
+        if: failure()
+        run: docker logs app

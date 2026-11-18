@@ -21,7 +21,8 @@ RUN mkdir -p data/raw \
     && curl -fsSL -o cmapss.zip \
        "https://phm-datasets.s3.amazonaws.com/NASA/6.+Turbofan+Engine+Degradation+Simulation+Data+Set.zip" \
     && unzip -j cmapss.zip "*/CMAPSSData.zip" \
-    && unzip -j CMAPSSData.zip train_FD001.txt test_FD001.txt RUL_FD001.txt -d data/raw \
+    && unzip -j CMAPSSData.zip train_FD001.txt test_FD001.txt RUL_FD001.txt \
+       test_FD002.txt test_FD003.txt -d data/raw \
     && rm cmapss.zip CMAPSSData.zip
 
 COPY src ./src
@@ -47,7 +48,9 @@ COPY --chown=user .streamlit ./.streamlit
 COPY --chown=user reports ./reports
 COPY --chown=user scripts/start.sh ./scripts/start.sh
 COPY --from=train --chown=user /app/models ./models
-COPY --from=train --chown=user /app/data/raw/test_FD001.txt /app/data/raw/RUL_FD001.txt ./data/raw/
+COPY --from=train --chown=user /app/data/raw/test_FD001.txt /app/data/raw/RUL_FD001.txt \
+    /app/data/raw/train_FD001.txt /app/data/raw/test_FD002.txt \
+    /app/data/raw/test_FD003.txt ./data/raw/
 
 USER user
 ENV HOME=/home/user \

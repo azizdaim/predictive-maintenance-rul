@@ -107,6 +107,11 @@ page = st.navigation(
             icon=":material/play_circle:",
         ),
         st.Page(
+            "app_pages/drift.py",
+            title="Drift check",
+            icon=":material/compare_arrows:",
+        ),
+        st.Page(
             "app_pages/about.py",
             title="How it works",
             icon=":material/info:",

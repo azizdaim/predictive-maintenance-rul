@@ -7,7 +7,14 @@ shared stylesheet in app.py, so every page uses one alarm language.
 
 import streamlit as st
 
-_CLASS = {"Healthy": "healthy", "Watch": "watch", "Replace soon": "replace"}
+# Drift labels reuse the same three alarm styles
+_CLASS = {
+    "Healthy": "healthy",
+    "Watch": "watch",
+    "Replace soon": "replace",
+    "Stable": "healthy",
+    "Drifted": "replace",
+}
 
 
 def status_pill(label: str) -> None:

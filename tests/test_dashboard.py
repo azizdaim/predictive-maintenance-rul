@@ -277,3 +277,20 @@ def test_engine_page_opens_the_engine_named_in_the_address() -> None:
     at.selectbox(key="engine_id").set_value(7).run()
     assert at.header[0].value.startswith("Engine 7 ")
     assert at.query_params["engine"] == "7"
+
+
+@pytest.mark.usefixtures("api_through_httpx")
+def test_drift_page_compares_fleets() -> None:
+    """Verify the training fleet reads stable and a new-conditions fleet drifted."""
+    at = AppTest.from_file(APP_PATH, default_timeout=60).run()
+    at.switch_page("app_pages/drift.py").run()
+
+    assert not at.exception
+    assert at.header[0].value == "Same fleet as training"
+    assert at.metric[0].value == "0 of 14"
+
+    at.segmented_control(key="drift_fleet").set_value("FD002").run()
+
+    assert not at.exception
+    assert at.header[0].value == "Six operating conditions"
+    assert at.metric[0].value == "14 of 14"

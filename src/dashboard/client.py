@@ -7,6 +7,7 @@ import pandas as pd
 
 from src.dashboard.palette import AMBER, GREEN, GREEN_DIM, RED
 from src.data.loader import DATASET_PATH, load_data
+from src.monitoring.drift import early_life
 
 # Where the FastAPI service runs; override with the RUL_API_URL environment variable
 API_URL = os.environ.get("RUL_API_URL", "http://127.0.0.1:8000")
@@ -117,6 +118,34 @@ def fetch_history_predictions(
     response = httpx.post(f"{api_url}/predict/history", json=payload, timeout=30.0)
     response.raise_for_status()
     return pd.DataFrame(response.json()["predictions"])
+
+
+def fetch_drift(readings: pd.DataFrame, api_url: str = API_URL) -> dict:
+    """Ask the API whether a fleet's sensors have drifted from training.
+
+    Only each engine's early-life cycles are sent, since only those are
+    compared.
+
+    Args:
+        readings: Raw telemetry for every engine in the fleet.
+        api_url: Base URL of the FastAPI service.
+
+    Returns:
+        dict: The drift report, with one entry per sensor, most drifted first.
+
+    Raises:
+        httpx.HTTPError: If the API is unreachable or rejects the request.
+    """
+    early = early_life(readings)
+    payload = {
+        "engines": [
+            {"cycles": rows.drop(columns="engine_id").to_dict(orient="records")}
+            for _, rows in early.groupby("engine_id")
+        ]
+    }
+    response = httpx.post(f"{api_url}/drift", json=payload, timeout=60.0)
+    response.raise_for_status()
+    return response.json()
 
 
 def fetch_model_info(api_url: str = API_URL) -> dict:

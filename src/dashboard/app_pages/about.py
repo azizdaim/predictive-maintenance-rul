@@ -170,9 +170,10 @@ if KEY_FINDINGS:
 st.header("Limitations", anchor=False)
 st.markdown(
     width=PROSE_WIDTH,
-    body="- **One simulated scenario.** The model is trained and tested on FD001: one "
-    "operating condition and one fault mode from NASA's engine simulator, not "
-    "real flight data. The other three C-MAPSS scenarios are untested.\n"
+    body="- **One simulated scenario.** The model is trained on FD001: one operating "
+    "condition and one fault mode from NASA's engine simulator, not real flight "
+    "data. On harder scenarios its error rises, which the Drift check page "
+    "detects.\n"
     "- **A slow start.** Trend features need more than 30 cycles of history, so "
     "predictions for very young engines are less reliable, and the app says so.\n"
     "- **A test set looked at once too often.** Test scores were viewed while "
