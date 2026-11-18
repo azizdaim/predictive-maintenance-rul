@@ -102,17 +102,8 @@ with st.container(horizontal=True, vertical_alignment="center"):
 
 # Closer to failure: the core glows harder and the rotors slow down
 wear = 1 - min(predicted, RUL_CAP) / RUL_CAP
-view, readout = st.columns([3, 2])
-with view:
-    engine_3d(
-        status_color=ENGINE_TINT[label],
-        description=f"3D engine {engine_id}, shown as {label.lower()}, "
-        f"{cycles_text(predicted)} left",
-        fan_speed=0.8 - 0.6 * wear,
-        glow=0.25 + 0.75 * wear,
-        height=420,
-        key="engine_detail_3d",
-    )
+# Readings first: on the left here, and first when columns stack on phones
+readout, view = st.columns([1, 1])
 with readout:
     with st.container(border=True):
         st.markdown("**Predicted remaining life**")
@@ -134,6 +125,16 @@ with readout:
             help="Positive means the model predicted more life than the engine "
             "had, which is the riskier mistake.",
         )
+with view:
+    engine_3d(
+        status_color=ENGINE_TINT[label],
+        description=f"3D engine {engine_id}, shown as {label.lower()}, "
+        f"{cycles_text(predicted)} left",
+        fan_speed=0.8 - 0.6 * wear,
+        glow=0.25 + 0.75 * wear,
+        height=320,
+        key="engine_detail_3d",
+    )
 
 if cycle <= TREND_LAG:
     st.warning(

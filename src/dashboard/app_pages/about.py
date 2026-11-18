@@ -131,12 +131,21 @@ if metrics:
         "failure",
     )
 
+# Read from the saved ablation results, which used all 62 candidate features,
+# so these differ slightly from the served 30-feature model's scores above
+ablation = get_ablation_results().set_index("variant")["near_failure_rmse"]
+with_trends, without_trends = (
+    ablation["All features"],
+    ablation["Without 30-cycle trends"],
+)
+
 findings, chart = st.columns([1, 1], gap="large")
 with findings:
     st.markdown(
-        "**Trends carry the model.** Without the 30-cycle trend features, error on "
-        "engines close to failure rises from 6.9 to 17.2 cycles. A sensor's "
-        "direction says more than its current value.\n\n"
+        "**Trends carry the model.** In the ablation study, which used all 62 "
+        "candidate features, removing the 30-cycle trends raised the error on "
+        f"engines close to failure from {with_trends:.1f} to {without_trends:.1f} "
+        "cycles. A sensor's direction says more than its current value.\n\n"
         "**Half the features do the same job.** Raw readings, rolling spreads, and "
         "operating settings were removed together, and accuracy did not drop. The "
         "served model uses the remaining 30 features out of 62.\n\n"

@@ -45,7 +45,7 @@
 .tile[data-status="Replace soon"] { background: var(--c); color: #000; }
 .tile .engine {
   position: absolute; top: 3px; left: 6px;
-  font-size: 0.65rem; font-weight: 400; opacity: 0.8;
+  font-size: 0.75rem; font-weight: 400;
 }
 .tile .rul { font-size: 1rem; font-weight: 700; }
 .tile:hover { outline-color: var(--st-text-color); }
@@ -53,13 +53,11 @@
 /* A hidden band keeps its place in the grid so the other tiles do not move */
 .tile[hidden] { display: block; visibility: hidden; }
 
-/* Phones: tiles get narrow, so drop the small engine number (it stays in
-   each tile's accessible name) and shrink the remaining-life figure */
+/* Phones: five tiles a row, so each keeps its engine number and stays a
+   comfortable size to tap. !important beats the column count set from Python. */
 @media (max-width: 640px) {
-  .grid { gap: 3px; }
-  .tile { height: 40px; }
-  .tile .engine { display: none; }
-  .tile .rul { font-size: 0.8rem; }
+  .grid { grid-template-columns: repeat(5, 1fr) !important; gap: 4px; }
+  .tile { height: 52px; }
 }
 
 @media (prefers-reduced-motion: no-preference) {

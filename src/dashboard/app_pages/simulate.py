@@ -60,17 +60,38 @@ def advance(rows: pd.DataFrame, last_cycle: int) -> None:
         show_api_error()
     st.session_state.sim_cycle = new_cycle
     st.session_state.sim_predictions = predictions
+    truth = get_true_rul()
+    actual_left = float(
+        truth.loc[
+            (truth["engine_id"] == st.session_state.sim_engine)
+            & (truth["cycle"] == new_cycle),
+            "true_rul",
+        ].iloc[0]
+    )
 
     # Raise an alert the first time the engine reaches a more serious status
     label = health_status(float(predictions["predicted_rul"].iloc[-1]))[0]
     if SEVERITY.index(label) > st.session_state.sim_worst:
         st.session_state.sim_worst = SEVERITY.index(label)
-        st.session_state.sim_events.append((new_cycle, label))
+        # Keep how much life was really left: the alert's whole point
+        st.session_state.sim_events.append((new_cycle, label, actual_left))
         st.toast(
             f"Engine {st.session_state.sim_engine} entered **{label.lower()}** "
             f"at cycle {new_cycle}",
             icon=":material/warning:",
         )
+
+
+def replay_outcome(engine: int) -> str:
+    """Sum up how early the replay warned, from its recorded alerts."""
+    left = {label: flights for _, label, flights in st.session_state.sim_events}
+    parts = []
+    if "Replace soon" in left:
+        flights = cycles_text(left["Replace soon"], unit="flight")
+        parts.append(f"for replacement {flights} before failure")
+    if "Watch" in left:
+        parts.append(f"for watching {cycles_text(left['Watch'], unit='flight')} before")
+    return f"Engine {engine} was flagged " + ", and ".join(parts) + "."
 
 
 st.title("Live simulation", anchor=False)
@@ -106,9 +127,14 @@ with st.container(horizontal=True, vertical_alignment="bottom"):
     rows = engines[engines["engine_id"] == engine_id]
     last_cycle = int(rows["cycle"].max())
     playing = st.session_state.sim_playing
+    finished = st.session_state.sim_cycle >= last_cycle
     st.button(
-        "Pause" if playing else "Play",
-        icon=":material/pause:" if playing else ":material/play_arrow:",
+        "Pause" if playing else "Replay" if finished else "Play",
+        icon=":material/pause:"
+        if playing
+        else ":material/replay:"
+        if finished
+        else ":material/play_arrow:",
         type="primary",
         key="sim_play",
         on_click=toggle_play,
@@ -144,7 +170,9 @@ def live_view() -> None:
         )
         if label:
             status_pill(label)
-    st.progress(cycle / last_cycle)
+    # A measurement, not a control, so the bar is restyled from cyan to white
+    with st.container(key="sim_progress"):
+        st.progress(cycle / last_cycle)
     if 0 < cycle <= TREND_LAG:
         st.warning(
             f"Trend features need more than {TREND_LAG} cycles of history, so "
@@ -153,7 +181,8 @@ def live_view() -> None:
             icon=":material/info:",
         )
 
-    view, readout = st.columns([3, 2])
+    # Readings first: on the left here, and first when columns stack on phones
+    readout, view = st.columns([1, 1])
     with view:
         engine_3d(
             # Grey before the first reading: no data yet, so no status colour
@@ -166,7 +195,7 @@ def live_view() -> None:
             ),
             fan_speed=0.8 - 0.6 * (1 - predicted / RUL_CAP) if predicted else 0.2,
             glow=0.25 + 0.75 * (1 - predicted / RUL_CAP) if predicted else 0.2,
-            height=400,
+            height=320,
             key="sim_engine_3d",
         )
     with readout:
@@ -185,11 +214,14 @@ def live_view() -> None:
             st.markdown("**Alerts**")
             if not st.session_state.sim_events:
                 st.caption("No alerts yet.")
-            for event_cycle, event_label in st.session_state.sim_events:
+            for event_cycle, event_label, left in st.session_state.sim_events:
                 st.markdown(
                     f":{STATUS_COLORS[event_label]}[:material/warning:] "
-                    f"Cycle {event_cycle}: entered {event_label.lower()}"
+                    f"Cycle {event_cycle}: {event_label.lower()}, "
+                    f"{cycles_text(left, unit='flight')} before failure"
                 )
+            if cycle >= last_cycle and st.session_state.sim_events:
+                st.markdown(f"**{replay_outcome(engine_id)}**")
 
     if cycle > 0:
         true_rul = get_true_rul()
