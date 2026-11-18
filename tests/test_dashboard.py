@@ -171,9 +171,14 @@ def test_simulation_replays_engine_and_raises_alerts() -> None:
     for _ in range(25):
         at.run()
     assert at.header[0].value == "Engine 31, cycle 196 of 196"
-    assert at.button(key="sim_play").label == "Play"
-    alerts = [m.value for m in at.markdown if "entered" in m.value]
-    assert [a.split(": entered ")[1] for a in alerts] == ["watch", "replace soon"]
+    assert at.button(key="sim_play").label == "Replay"
+    # Each alert says how much life was really left: the replay's payoff
+    alerts = [m.value for m in at.markdown if "before failure" in m.value]
+    assert [a.split(": ")[1].split(",")[0] for a in alerts[:2]] == [
+        "watch",
+        "replace soon",
+    ]
+    assert any(m.value.startswith("**Engine 31 was flagged") for m in at.markdown)
 
     at.button(key="sim_reset").click().run()
     assert at.header[0].value == "Engine 31, cycle 0 of 196"

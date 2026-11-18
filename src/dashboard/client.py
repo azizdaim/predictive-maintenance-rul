@@ -35,11 +35,11 @@ STATUS_HEX = {"Replace soon": RED, "Watch": AMBER, "Healthy": GREEN}
 ENGINE_TINT = {**STATUS_HEX, "Healthy": GREEN_DIM}
 
 
-def cycles_text(n: float, signed: bool = False) -> str:
-    """Write a cycle count in words, singular for one: "1 cycle", "+3 cycles"."""
+def cycles_text(n: float, signed: bool = False, unit: str = "cycle") -> str:
+    """Write a count in words, singular for one: "1 cycle", "+3 cycles"."""
     count = round(n)
     number = f"{count:+d}" if signed else f"{count}"
-    return f"{number} cycle" if abs(count) == 1 else f"{number} cycles"
+    return f"{number} {unit}" if abs(count) == 1 else f"{number} {unit}s"
 
 
 def first_alerts(

@@ -15,7 +15,14 @@ from src.dashboard.embedded_api import (  # noqa: E402
     embedded_api_enabled,
     start_embedded_api,
 )
-from src.dashboard.palette import AMBER, BLACK, CYAN, GREEN, RED  # noqa: E402
+from src.dashboard.palette import (  # noqa: E402
+    AMBER,
+    BLACK,
+    CYAN,
+    GREEN,
+    RED,
+    WHITE,
+)
 
 st.set_page_config(
     page_title="Turbofan engine health", page_icon=":material/flight:", layout="wide"
@@ -50,6 +57,12 @@ h1, h2 {{ text-wrap: balance; }}
 .status-healthy {{ color: {GREEN}; padding-left: 0; padding-right: 0; }}
 .status-watch {{ color: {AMBER}; border-color: {AMBER}; }}
 .status-replace {{ color: {BLACK}; background: {RED}; }}
+.st-key-count_replace [data-testid="stMetricValue"] {{ color: {RED}; }}
+.st-key-count_watch [data-testid="stMetricValue"] {{ color: {AMBER}; }}
+.st-key-sim_progress [role="progressbar"] div div {{ background: {WHITE}; }}
+@media (max-width: 640px) {{
+  [data-testid="stMetricValue"] {{ font-size: 1.5rem; }}
+}}
 </style>"""
 )
 

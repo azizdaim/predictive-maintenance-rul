@@ -93,7 +93,8 @@ export default function (component) {
     const all = tiles();
     const current = all.indexOf(event.target);
     if (current < 0) return;
-    const cols = data.columns;
+    // Read the columns actually shown: phones use fewer than data.columns
+    const cols = getComputedStyle(grid).gridTemplateColumns.split(" ").length;
     const steps = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: cols, ArrowUp: -cols };
     const step = steps[event.key];
     let next = null;

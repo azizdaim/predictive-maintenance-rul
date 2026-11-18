@@ -42,9 +42,14 @@ if "open_engine" in st.session_state:
 counts = fleet["status"].value_counts()
 with st.container(horizontal=True):
     for label in STATUS_COLORS:
-        st.metric(
-            label, f"{counts.get(label, 0)} engines", border=True, help=BAND_HELP[label]
-        )
+        # Keyed so the shared stylesheet can colour warning counts
+        with st.container(key=f"count_{label.split()[0].lower()}"):
+            st.metric(
+                label,
+                f"{counts.get(label, 0)} engines",
+                border=True,
+                help=BAND_HELP[label],
+            )
 
 with st.container(border=True):
     with st.container(horizontal=True, vertical_alignment="center"):
@@ -79,7 +84,8 @@ with st.container(border=True):
 
 # Status as coloured text in the same alarm colours as the map; Streamlit's own
 # status pills cannot take the dashboard's style
-table = fleet.style.map(
+table = fleet.assign(engine="/engine?engine=" + fleet["engine_id"].astype(str))
+table = table.style.map(
     lambda status: f"color: {STATUS_HEX[status]}; font-weight: 700",
     subset=["status"],
 )
@@ -88,7 +94,7 @@ with st.container(border=True):
     st.markdown("**Engines by predicted remaining life**")
     # Lock the header: an invisible cover over the header row stops visitors
     # sorting, reordering, resizing, or hiding columns, which st.dataframe has
-    # no setting for. Rows below still scroll and open an engine on click.
+    # no setting for. Rows below still scroll, and engine links still work.
     st.html(
         "<style>.st-key-fleet_table .stDataFrame { position: relative; }"
         ".st-key-fleet_table .stDataFrame::after { content: ''; position: absolute;"
@@ -96,18 +102,14 @@ with st.container(border=True):
         "</style>"
     )
 
-    def open_clicked_row() -> None:
-        """Remember the clicked row's engine; a late click is ignored."""
-        table_state = st.session_state.get("fleet_table")
-        cells = getattr(getattr(table_state, "selection", None), "cells", None)
-        if cells:
-            row, _ = cells[0]  # each cell is a (row position, column name) pair
-            st.session_state.open_engine = int(fleet["engine_id"].iloc[row])
-
     st.dataframe(
         table,
         column_config={
-            "engine_id": st.column_config.NumberColumn("Engine", format="%d"),
+            # A real link per engine: it only opens when chosen, never when
+            # keyboard focus merely lands on the table
+            "engine": st.column_config.LinkColumn(
+                "Engine", display_text=r"engine=(\d+)"
+            ),
             "status": st.column_config.TextColumn("Status"),
             # Magenta marks the model's predictions everywhere in the dashboard
             "predicted_rul": st.column_config.ProgressColumn(
@@ -125,12 +127,9 @@ with st.container(border=True):
                 color=MAGENTA,
             ),
         },
+        column_order=["engine", "status", "predicted_rul", "cycles", "trend"],
         hide_index=True,
-        on_select=open_clicked_row,
-        # Single-cell selection: clicking anywhere in a row opens that engine,
-        # without the checkbox column that row selection adds
-        selection_mode="single-cell",
         key="fleet_table",
         alt="Test engines sorted from least to most predicted remaining life",
     )
-    st.caption("Click an engine to open its detail page.")
+    st.caption("Select an engine number to open its detail page in a new tab.")
