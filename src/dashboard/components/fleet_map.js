@@ -21,6 +21,7 @@ export default function (component) {
 
   for (const band of data.bands) root.style.setProperty(`--${band.css}`, band.color);
   root.style.setProperty("--healthy-dim", data.healthyDim);
+  root.style.setProperty("--muted", data.muted);
 
   const tiles = () => [...grid.children];
   const visible = () => tiles().filter((t) => !t.hidden);

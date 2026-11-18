@@ -23,6 +23,7 @@
   border: 1.5px solid var(--c); box-sizing: border-box;
 }
 .band[data-status="Healthy"] .swatch { border-color: var(--healthy-dim); }
+.band[data-status="Watch"] .swatch { border-width: 2.5px; }
 .band[data-status="Replace soon"] .swatch { background: var(--c); }
 .band[aria-pressed="false"] { opacity: 0.4; }
 .band:focus-visible { outline: 2px solid var(--st-primary-color); outline-offset: 2px; }
@@ -36,7 +37,11 @@
   font-family: var(--st-font); font-variant-numeric: tabular-nums;
   outline: 2px solid transparent; outline-offset: 1px;
 }
-.tile[data-status="Healthy"] { border-color: var(--healthy-dim); }
+/* Healthy is the quietest state: dim border and muted digits */
+.tile[data-status="Healthy"] { border-color: var(--healthy-dim); color: var(--muted); }
+/* Watch differs from Healthy by outline weight too, not only by hue,
+   for visitors who cannot tell amber from green */
+.tile[data-status="Watch"] { border-width: 2.5px; }
 .tile[data-status="Replace soon"] { background: var(--c); color: #000; }
 .tile .engine {
   position: absolute; top: 3px; left: 6px;
@@ -47,6 +52,15 @@
 .tile:focus-visible { outline: 3px solid var(--st-primary-color); }
 /* A hidden band keeps its place in the grid so the other tiles do not move */
 .tile[hidden] { display: block; visibility: hidden; }
+
+/* Phones: tiles get narrow, so drop the small engine number (it stays in
+   each tile's accessible name) and shrink the remaining-life figure */
+@media (max-width: 640px) {
+  .grid { gap: 3px; }
+  .tile { height: 40px; }
+  .tile .engine { display: none; }
+  .tile .rul { font-size: 0.8rem; }
+}
 
 @media (prefers-reduced-motion: no-preference) {
   .tile, .band { transition: outline-color 120ms ease-out, opacity 120ms ease-out; }

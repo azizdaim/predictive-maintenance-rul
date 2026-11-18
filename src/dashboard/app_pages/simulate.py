@@ -6,19 +6,24 @@ import streamlit as st
 
 from src.dashboard.charts import rul_gauge, rul_history_chart
 from src.dashboard.client import (
+    DEFAULT_REPLAY_SPEED,
+    ENGINE_TINT,
+    REPLAY_SPEEDS,
+    RUL_CAP,
     STATUS_COLORS,
-    STATUS_HEX,
+    cycles_text,
     fetch_history_predictions,
     health_status,
 )
 from src.dashboard.components.engine3d import engine_3d
 from src.dashboard.components.status import status_pill
 from src.dashboard.data import get_test_engines, get_true_rul, show_api_error
-from src.dashboard.palette import CYAN
+from src.dashboard.palette import MUTED
+from src.features.build_features import TREND_LAG
 
 # Seconds between steps, and how many cycles each step reveals at each speed
 TICK_SECONDS = 0.4
-SPEEDS = {"Normal": 2, "Fast": 5, "Very fast": 10}
+SPEEDS = REPLAY_SPEEDS
 
 # Most urgent last, so a higher index means a more serious status
 SEVERITY = ["Healthy", "Watch", "Replace soon"]
@@ -68,7 +73,7 @@ def advance(rows: pd.DataFrame, last_cycle: int) -> None:
         )
 
 
-st.title("Live simulation", icon=":material/play_circle:", anchor=False)
+st.title("Live simulation", anchor=False)
 st.caption(
     "Replay a test engine as if it were reporting in live. Each step sends the "
     "readings so far to the prediction API, so the model only ever sees the past."
@@ -92,7 +97,11 @@ with st.container(horizontal=True, vertical_alignment="bottom"):
         width=220,
     )
     st.segmented_control(
-        "Speed", options=list(SPEEDS), default="Fast", key="sim_speed", required=True
+        "Speed",
+        options=list(SPEEDS),
+        default=DEFAULT_REPLAY_SPEED,
+        key="sim_speed",
+        required=True,
     )
     rows = engines[engines["engine_id"] == engine_id]
     last_cycle = int(rows["cycle"].max())
@@ -128,17 +137,35 @@ def live_view() -> None:
         label = health_status(predicted)[0]
 
     with st.container(horizontal=True, vertical_alignment="center"):
-        st.subheader(f"Engine {engine_id}, cycle {cycle} of {last_cycle}", anchor=False)
+        st.header(
+            f"Engine {engine_id}, cycle {cycle} of {last_cycle}",
+            anchor=False,
+            width="content",
+        )
         if label:
             status_pill(label)
     st.progress(cycle / last_cycle)
+    if 0 < cycle <= TREND_LAG:
+        st.warning(
+            f"Trend features need more than {TREND_LAG} cycles of history, so "
+            "these first predictions are less reliable.",
+            title="Short history",
+            icon=":material/info:",
+        )
 
     view, readout = st.columns([3, 2])
     with view:
         engine_3d(
-            status_color=STATUS_HEX[label] if label else CYAN,
-            fan_speed=0.8 - 0.6 * (1 - predicted / 125) if predicted else 0.2,
-            glow=0.25 + 0.75 * (1 - predicted / 125) if predicted else 0.2,
+            # Grey before the first reading: no data yet, so no status colour
+            status_color=ENGINE_TINT[label] if label else MUTED,
+            description=(
+                f"3D engine {engine_id}, shown as {label.lower()}, "
+                f"{cycles_text(predicted)} left"
+                if label
+                else f"3D engine {engine_id}, waiting for the replay to start"
+            ),
+            fan_speed=0.8 - 0.6 * (1 - predicted / RUL_CAP) if predicted else 0.2,
+            glow=0.25 + 0.75 * (1 - predicted / RUL_CAP) if predicted else 0.2,
             height=400,
             key="sim_engine_3d",
         )
@@ -146,15 +173,13 @@ def live_view() -> None:
         with st.container(border=True):
             st.markdown("**Predicted remaining life**")
             if predicted is None:
-                st.info(
-                    "Press play to start sending readings.", icon=":material/sensors:"
-                )
+                st.caption("Press play to start sending readings.")
             else:
                 st.echarts_chart(
                     rul_gauge(predicted),
                     height=230,
                     key="sim_gauge",
-                    alt=f"Gauge showing {predicted:.0f} predicted cycles left",
+                    alt=f"Gauge showing {cycles_text(predicted)} predicted left",
                 )
         with st.container(border=True):
             st.markdown("**Alerts**")
@@ -177,7 +202,8 @@ def live_view() -> None:
                 rul_history_chart(history, cycle, last_cycle=last_cycle),
                 height=320,
                 key="sim_history",
-                alt=f"Predicted and true RUL for engine {engine_id} to cycle {cycle}",
+                alt=f"Predicted and actual remaining life for engine {engine_id} "
+                f"to cycle {cycle}",
             )
 
 

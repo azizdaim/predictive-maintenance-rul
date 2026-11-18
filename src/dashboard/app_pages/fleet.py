@@ -7,20 +7,24 @@ from src.dashboard.client import (
     REPLACE_SOON_BELOW,
     RUL_CAP,
     STATUS_COLORS,
+    STATUS_HEX,
     WATCH_BELOW,
 )
 from src.dashboard.components.fleet_map import fleet_map, fleet_tiles
 from src.dashboard.data import get_fleet, show_api_error
+from src.dashboard.palette import MAGENTA
 
 BAND_HELP = {
-    "Replace soon": f"Predicted RUL below {REPLACE_SOON_BELOW} cycles.",
-    "Watch": f"Predicted RUL from {REPLACE_SOON_BELOW} to {WATCH_BELOW} cycles.",
-    "Healthy": f"Predicted RUL of {WATCH_BELOW} cycles or more.",
+    "Replace soon": f"Predicted remaining life below {REPLACE_SOON_BELOW} cycles.",
+    "Watch": f"Predicted remaining life from {REPLACE_SOON_BELOW} to "
+    f"{WATCH_BELOW - 1} cycles.",
+    "Healthy": f"Predicted remaining life of {WATCH_BELOW} cycles or more.",
 }
 
-st.title("Fleet overview", icon=":material/dashboard:", anchor=False)
+st.title("Fleet overview", anchor=False)
 st.caption(
-    "All 100 NASA C-MAPSS FD001 test engines, coloured by predicted remaining life."
+    "All 100 simulated NASA test engines, coloured by predicted remaining life, in "
+    "cycles (one cycle is one flight)."
 )
 
 try:
@@ -73,7 +77,12 @@ with st.container(border=True):
         "Click a tile to open that engine. Click a band above the map to hide it."
     )
 
-table = fleet.assign(status=fleet["status"].map(lambda s: [s]))
+# Status as coloured text in the same alarm colours as the map; Streamlit's own
+# status pills cannot take the dashboard's style
+table = fleet.style.map(
+    lambda status: f"color: {STATUS_HEX[status]}; font-weight: 700",
+    subset=["status"],
+)
 
 with st.container(border=True):
     st.markdown("**Engines by predicted remaining life**")
@@ -99,20 +108,21 @@ with st.container(border=True):
         table,
         column_config={
             "engine_id": st.column_config.NumberColumn("Engine", format="%d"),
-            "status": st.column_config.MultiselectColumn(
-                "Status",
-                options=list(STATUS_COLORS),
-                color=list(STATUS_COLORS.values()),
-            ),
+            "status": st.column_config.TextColumn("Status"),
+            # Magenta marks the model's predictions everywhere in the dashboard
             "predicted_rul": st.column_config.ProgressColumn(
-                "Predicted RUL (cycles)",
+                "Predicted remaining life (cycles)",
                 min_value=0,
                 max_value=RUL_CAP,
                 format="%.0f",
+                color=MAGENTA,
             ),
             "cycles": st.column_config.NumberColumn("Cycles recorded"),
             "trend": st.column_config.LineChartColumn(
-                "Predicted RUL, last 50 cycles", y_min=0, y_max=RUL_CAP
+                "Predicted remaining life, last 50 cycles",
+                y_min=0,
+                y_max=RUL_CAP,
+                color=MAGENTA,
             ),
         },
         hide_index=True,

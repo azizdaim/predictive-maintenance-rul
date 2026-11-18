@@ -37,6 +37,7 @@ def engine_3d(
     *,
     status_color: str = CYAN,
     label: str | None = None,
+    description: str = "3D turbofan engine",
     fan_speed: float = 0.6,
     glow: float = 0.5,
     height: int = 440,
@@ -47,6 +48,7 @@ def engine_3d(
     Args:
         status_color: Hex color for the intake halo, core light, and turbine tint.
         label: Short status text shown in the corner chip. Hidden if None.
+        description: What the engine shows, read out by screen readers.
         fan_speed: Rotor speed from 0 (idle) to 1 (fast).
         glow: Core light strength from 0 to 1.
         height: Height of the view in pixels.
@@ -56,6 +58,7 @@ def engine_3d(
         data={
             "status_color": status_color,
             "label": label,
+            "description": description,
             "fan_speed": fan_speed,
             "glow": glow,
             "height": height,

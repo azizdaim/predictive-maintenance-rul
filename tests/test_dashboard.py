@@ -15,7 +15,9 @@ from streamlit.testing.v1 import AppTest
 import src.api.main as api
 from src.dashboard.client import (
     API_URL,
+    cycles_text,
     fetch_history_predictions,
+    first_alerts,
     fleet_table,
     health_status,
     true_rul_by_cycle,
@@ -150,7 +152,7 @@ def test_engine_page_shows_engine_and_updates() -> None:
 
     at.selectbox[0].set_value(1).run()
     assert not at.exception
-    assert at.subheader[0].value.startswith("Engine 1 ")
+    assert at.header[0].value.startswith("Engine 1 ")
 
 
 @pytest.mark.usefixtures("api_through_httpx")
@@ -158,23 +160,23 @@ def test_simulation_replays_engine_and_raises_alerts() -> None:
     """Verify play advances the replay, alerts fire, and it stops at the end."""
     at = AppTest.from_file(APP_PATH, default_timeout=60).run()
     at.switch_page("app_pages/simulate.py").run()
-    assert at.subheader[0].value == "Engine 31, cycle 0 of 196"
+    assert at.header[0].value == "Engine 31, cycle 0 of 196"
 
     at.segmented_control(key="sim_speed").set_value("Very fast")
     at.button(key="sim_play").click().run()
     assert not at.exception
-    assert at.subheader[0].value == "Engine 31, cycle 10 of 196"
+    assert at.header[0].value == "Engine 31, cycle 10 of 196"
 
     # The timer does not run in tests, so each rerun stands in for one tick
     for _ in range(25):
         at.run()
-    assert at.subheader[0].value == "Engine 31, cycle 196 of 196"
+    assert at.header[0].value == "Engine 31, cycle 196 of 196"
     assert at.button(key="sim_play").label == "Play"
     alerts = [m.value for m in at.markdown if "entered" in m.value]
     assert [a.split(": entered ")[1] for a in alerts] == ["watch", "replace soon"]
 
     at.button(key="sim_reset").click().run()
-    assert at.subheader[0].value == "Engine 31, cycle 0 of 196"
+    assert at.header[0].value == "Engine 31, cycle 0 of 196"
 
 
 @pytest.mark.usefixtures("api_through_httpx")
@@ -227,3 +229,46 @@ def test_api_message_suits_visitors_on_the_hosted_site(
     assert expected in message
     if embedded == "1":
         assert "uvicorn" not in message
+
+
+def test_cycles_text_uses_singular_for_one() -> None:
+    """Verify "1 cycle" and "+1 cycle", but "8 cycles" and "-3 cycles"."""
+    assert cycles_text(1) == "1 cycle"
+    assert cycles_text(8.4) == "8 cycles"
+    assert cycles_text(1, signed=True) == "+1 cycle"
+    assert cycles_text(-3, signed=True) == "-3 cycles"
+
+
+def test_first_alerts_follow_the_replay_steps() -> None:
+    """Verify alerts fire at the first replay step that reaches a worse band."""
+    cycles = list(range(1, 21))
+    # Predicted life falls 10 per cycle from 200: watch below 60 at cycle 16,
+    # replace soon below 30 at cycle 19
+    predictions = pd.DataFrame(
+        {"cycle": cycles, "predicted_rul": [210 - 10 * c for c in cycles]}
+    )
+    true_rul = pd.DataFrame({"cycle": cycles, "true_rul": [40 - c for c in cycles]})
+
+    alerts = first_alerts(predictions, true_rul, step=5)
+
+    # Steps land on cycles 5, 10, 15, 20: watch is first seen at 20, together
+    # with replace soon, so only the most serious alert fires
+    assert alerts == {"Replace soon": (20, 20.0)}
+    alerts = first_alerts(predictions, true_rul, step=2)
+    assert alerts == {"Watch": (16, 24.0), "Replace soon": (20, 20.0)}
+
+
+@pytest.mark.usefixtures("api_through_httpx")
+def test_engine_page_opens_the_engine_named_in_the_address() -> None:
+    """Verify ?engine=34 opens engine 34, and picking another updates the address."""
+    at = AppTest.from_file(APP_PATH, default_timeout=60)
+    at.query_params["engine"] = "34"
+    at.run()
+    at.switch_page("app_pages/engine.py").run()
+
+    assert not at.exception
+    assert at.header[0].value.startswith("Engine 34 ")
+
+    at.selectbox(key="engine_id").set_value(7).run()
+    assert at.header[0].value.startswith("Engine 7 ")
+    assert at.query_params["engine"] == "7"
