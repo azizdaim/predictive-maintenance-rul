@@ -84,7 +84,12 @@ with st.container(border=True):
 
 # Status as coloured text in the same alarm colours as the map; Streamlit's own
 # status pills cannot take the dashboard's style
-table = fleet.assign(engine="/engine?engine=" + fleet["engine_id"].astype(str))
+# Whole cycles, so screen readers say "3", not "2.84" or 50-digit trends
+table = fleet.assign(
+    engine="/engine?engine=" + fleet["engine_id"].astype(str),
+    predicted_rul=fleet["predicted_rul"].round(),
+    trend=fleet["trend"].map(lambda values: [round(v) for v in values]),
+)
 table = table.style.map(
     lambda status: f"color: {STATUS_HEX[status]}; font-weight: 700",
     subset=["status"],
@@ -132,4 +137,7 @@ with st.container(border=True):
         key="fleet_table",
         alt="Test engines sorted from least to most predicted remaining life",
     )
-    st.caption("Select an engine number to open its detail page in a new tab.")
+    st.caption(
+        "Select an engine number to open its detail page in a new tab. With a "
+        "keyboard, the map above is the quickest way to open an engine."
+    )

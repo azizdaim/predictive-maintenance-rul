@@ -156,6 +156,6 @@ with st.container(border=True):
         f"Actual remaining life comes from NASA's answer file and is capped at "
         f"{RUL_CAP}, like "
         f"the model's training target. Shaded bands: replace soon below "
-        f"{REPLACE_SOON_BELOW} cycles, watch below {WATCH_BELOW}. Scroll or drag "
-        "the slider to zoom."
+        f"{REPLACE_SOON_BELOW} cycles, watch below {WATCH_BELOW}. Drag "
+        "the slider under the chart to zoom."
     )

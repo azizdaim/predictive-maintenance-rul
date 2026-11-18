@@ -153,7 +153,6 @@ def rul_history_chart(
             "splitLine": {"lineStyle": {"color": _GRID}},
         },
         "dataZoom": [
-            {"type": "inside"},
             {
                 # Palette colours instead of ECharts' default blue-grey
                 "type": "slider",
