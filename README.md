@@ -61,7 +61,36 @@ flowchart LR
 | Experiment tracking | MLflow |
 | Serving | FastAPI, Pydantic, Uvicorn |
 | Dashboard | Streamlit, ECharts, three.js (a 3D engine built in code) |
-| Quality and delivery | pytest (78 tests, run by GitHub Actions on every push), Ruff, Docker |
+| Monitoring | Population Stability Index drift check, built on NumPy |
+| Quality | pytest (80 tests), Ruff |
+| Delivery | Docker (multi-stage build), GitHub Actions |
+
+## Engineering
+
+What keeps the system trustworthy outside a notebook:
+
+- **One feature pipeline for training and serving.** The API rebuilds features
+  from raw readings with the same function used in training, so serving cannot
+  drift from training. Clients never compute features themselves.
+- **Validation at the boundary.** Pydantic rejects requests with a missing
+  sensor, cycle numbers that do not strictly increase, or more than 1,000
+  cycles, with a clear 422 error, before anything reaches the model.
+- **Outputs kept in range, with honest warnings.** Predictions are clipped to
+  the training range of 0 to 125 cycles, and histories of 30 cycles or fewer
+  come back with a reliability warning.
+- **Features that provably cannot see the future.** Tests check that cutting an
+  engine's history short never changes its earlier features, so offline scores
+  reflect what the model can do live.
+- **Continuous integration.** Every push runs Ruff and the 80 tests, then builds
+  the Docker image from scratch, downloading NASA's data and training the model,
+  and smoke-tests the running container with a live drift request.
+- **Reproducible builds.** The app's dependencies are pinned to exact versions,
+  and the multi-stage Dockerfile trains in one stage and ships only what the
+  running app needs in the other.
+- **Experiment tracking.** Every training run logs its settings,
+  cross-validation scores, and model to MLflow.
+- **Drift monitoring.** A `/drift` endpoint compares a batch of new engines with
+  the training data, sensor by sensor, before their predictions are trusted.
 
 ## Results
 
@@ -245,7 +274,36 @@ The prediction endpoints take a list of cycles, oldest first, each with the
 cycle number, 3 settings, and 21 sensors in the C-MAPSS format. Histories of 30
 cycles or fewer get a warning, because the trend features need a longer history.
 `/drift` takes a list of such engine histories and returns a PSI and status for
-each sensor.
+each sensor. Interactive documentation is served at `/docs`.
+
+**Example.** Send an engine's history, oldest cycle first (abbreviated here):
+
+```bash
+curl -X POST http://127.0.0.1:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"cycles": [{"cycle": 1, "setting_1": -0.0019, "setting_2": -0.0004,
+                   "setting_3": 100.0, "sensor_1": 518.67, "sensor_2": 642.75,
+                   ..., "sensor_21": 23.4048},
+                  ...]}'
+```
+
+For test engine 31, all 196 cycles, where NASA's answer file says 8 cycles were
+left:
+
+```json
+{"predicted_rul": 9.16, "last_cycle": 196, "cycles_received": 196, "warning": null}
+```
+
+The same engine's first 20 cycles only:
+
+```json
+{
+  "predicted_rul": 124.96,
+  "last_cycle": 20,
+  "cycles_received": 20,
+  "warning": "Only 20 cycles received. Trend features need more than 30, so this prediction is less reliable."
+}
+```
 
 ## Project structure
 
